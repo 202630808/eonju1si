@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 볼 영화 추천 | Today's Movie Picker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&family=Noto+Sans+KR:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cinema: {
+                            900: '#0a0a0f',
+                            800: '#12121a',
+                            700: '#1a1a26',
+                            600: '#252538',
+                            gold: '#f5c518',
+                            red: '#e50914',
+                            purple: '#6366f1'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                        display: ['Montserrat', 'Noto Sans KR', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body {
+            background-color: #0a0a0f;
+            color: #f3f4f6;
+            font-family: 'Noto Sans KR', sans-serif;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #252538;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #e50914;
+        }
+
+        .glass-panel {
+            background: rgba(26, 26, 38, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(229, 9, 20, 0.4); }
+            50% { transform: scale(1.02); box-shadow: 0 0 35px rgba(229, 9, 20, 0.7); }
+        }
+
+        .animate-pulse-glow {
+            animation: pulseGlow 3s infinite ease-in-out;
+        }
+
+        @keyframes shuffle {
+            0% { transform: translateY(0); filter: blur(0); opacity: 1; }
+            50% { transform: translateY(-15px); filter: blur(3px); opacity: 0.4; }
+            100% { transform: translateY(0); filter: blur(0); opacity: 1; }
+        }
+
+        .shuffling {
+            animation: shuffle 0.2s ease-in-out infinite;
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(25px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-active {
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-cinema-red selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 glass-panel border-b border-white/10 px-4 lg:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cinema-red to-cinema-purple flex items-center justify-center text-white font-black text-xl shadow-lg group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-film"></i>
+                </div>
+                <div>
+                    <h1 class="font-display font-black text-xl md:text-2xl tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-cinema-gold">
+                        CINE<span class="text-cinema-red">RANDOM</span>
+                    </h1>
+                    <p class="text-[11px] text-gray-400 -mt-1 hidden sm:block">오늘 볼 영화 추천 & 명장면 스틸컷</p>
+                </div>
+            </a>
+
+            <!-- Search & Wishlist Button -->
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <div class="relative flex-grow sm:flex-grow-0 sm:w-64">
+                    <input type="text" id="search-input" placeholder="영화 제목/배우/감독 검색..." 
+                           class="w-full pl-9 pr-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-cinema-red transition-all">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                </div>
+                
+                <button id="open-wishlist-btn" class="flex items-center gap-2 px-4 py-2 rounded-full glass-panel hover:bg-white/10 text-cinema-gold text-xs sm:text-sm font-semibold transition-all hover:scale-105 whitespace-nowrap">
+                    <i class="fa-solid fa-bookmark"></i>
+                    <span>보관함</span>
+                    <span id="wishlist-count" class="ml-1 bg-cinema-red text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center">
+
+        <!-- Hero Title Section -->
+        <section class="text-center max-w-3xl mx-auto my-4">
+            <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-cinema-red/10 border border-cinema-red/30 text-cinema-red mb-3">
+                <i class="fa-solid fa-clapperboard"></i> 취향 저격 영화 탐색기
+            </span>
+            <h2 class="text-3xl md:text-5xl font-black text-white leading-tight mb-3 tracking-tight">
+                오늘 어떤 영화를 <br class="sm:hidden"><span class="bg-clip-text text-transparent bg-gradient-to-r from-cinema-red via-cinema-gold to-yellow-200">볼지 고민되시나요?</span>
+            </h2>
+            <p class="text-gray-400 text-xs md:text-sm max-w-xl mx-auto">
+                장르를 선택하고 버튼을 눌러보세요! <br class="hidden sm:block">인생 영화 정보와 함께 실제 고화질 영화 속 명장면 스틸컷을 보여드립니다.
+            </p>
+        </section>
+
+        <!-- Genre Filter Pills -->
+        <section class="w-full max-w-4xl mb-6">
+            <div class="flex items-center justify-center gap-2 flex-wrap" id="genre-container">
+                <!-- Dynamically Populated -->
+            </div>
+        </section>
+
+        <!-- Action Button -->
+        <section class="mb-10">
+            <button id="recommend-btn" class="animate-pulse-glow relative group overflow-hidden px-8 py-4 sm:px-10 sm:py-5 rounded-2xl bg-gradient-to-r from-cinema-red via-red-600 to-cinema-purple text-white font-black text-lg md:text-xl tracking-wider shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-3">
+                <span class="relative z-10 flex items-center gap-3">
+                    <i class="fa-solid fa-dice text-2xl group-hover:rotate-180 transition-transform duration-500"></i>
+                    <span id="btn-text">오늘의 영화 추천받기</span>
+                </span>
+                <div class="absolute inset-0 bg-gradient-to-r from-cinema-gold via-cinema-red to-cinema-purple opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></div>
+            </button>
+        </section>
+
+        <!-- Main Display Container -->
+        <section id="movie-display-area" class="w-full max-w-5xl">
+            <!-- Initial Placeholder -->
+            <div id="placeholder-card" class="glass-panel rounded-3xl p-8 sm:p-12 text-center border border-dashed border-white/20 flex flex-col items-center justify-center min-h-[380px]">
+                <div class="w-20 h-20 rounded-full bg-cinema-700/80 flex items-center justify-center text-cinema-gold text-3xl mb-4 shadow-inner">
+                    <i class="fa-solid fa-popcorn"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-200 mb-2">어떤 영화가 나올까요?</h3>
+                <p class="text-gray-400 text-xs sm:text-sm max-w-md mb-6">상단의 추천 버튼을 눌러 랜덤 추천 영화와 함께 실제 영화 명장면 스틸컷을 감상해보세요!</p>
+                <div class="flex flex-wrap justify-center gap-2 text-xs text-gray-500">
+                    <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10">#랜덤추천</span>
+                    <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10">#실제영화스틸컷</span>
+                    <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10">#인생영화</span>
+                </div>
+            </div>
+
+            <!-- Active Movie Display Card -->
+            <div id="movie-card" class="hidden glass-panel rounded-3xl overflow-hidden border border-white/10 shadow-2xl fade-in-up">
+                <!-- Movie Backdrop -->
+                <div class="relative h-64 md:h-80 w-full overflow-hidden">
+                    <img id="movie-backdrop" src="" alt="Backdrop" class="w-full h-full object-cover filter brightness-50 scale-105 transition-transform duration-1000">
+                    <div class="absolute inset-0 bg-gradient-to-t from-cinema-900 via-cinema-900/60 to-transparent"></div>
+                    
+                    <!-- Top Actions -->
+                    <div class="absolute top-4 right-4 flex gap-2 z-10">
+                        <button id="bookmark-btn" class="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:text-cinema-gold transition-colors hover:scale-110 shadow-lg" title="찜하기">
+                            <i class="fa-regular fa-bookmark text-xl" id="bookmark-icon"></i>
+                        </button>
+                    </div>
+
+                    <!-- Genre & Title Badge Overlay -->
+                    <div class="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2 flex-wrap" id="movie-genres-tags"></div>
+                            <h2 id="movie-title" class="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-md"></h2>
+                            <p id="movie-original-title" class="text-sm md:text-base text-gray-300 font-display italic mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Info Section -->
+                <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-8">
+                    <!-- Left Column: Poster -->
+                    <div class="md:col-span-4 lg:col-span-3 -mt-16 sm:-mt-24 z-20 flex justify-center md:block">
+                        <div class="relative group rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 w-48 sm:w-56 md:w-full cursor-pointer" id="poster-click-container">
+                            <img id="movie-poster" src="" alt="Poster" class="w-full h-auto object-cover rounded-2xl transition-transform duration-500 group-hover:scale-105">
+                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <span class="text-white text-xs font-semibold px-3 py-1.5 rounded-full bg-cinema-red/80 backdrop-blur-sm">포스터 크게보기</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Details & Metadata -->
+                    <div class="md:col-span-8 lg:col-span-9 flex flex-col justify-between space-y-6">
+                        <!-- Key Stats Bar -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-cinema-gold/20 text-cinema-gold flex items-center justify-center text-lg">
+                                    <i class="fa-solid fa-star"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium">평점</p>
+                                    <p class="text-sm font-bold text-white"><span id="movie-rating" class="text-cinema-gold text-base"></span> / 10</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-lg">
+                                    <i class="fa-regular fa-calendar font-bold"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium">개봉년도</p>
+                                    <p id="movie-year" class="text-sm font-bold text-white"></p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg">
+                                    <i class="fa-regular fa-clock"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium">러닝타임</p>
+                                    <p id="movie-runtime" class="text-sm font-bold text-white"></p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center text-lg">
+                                    <i class="fa-solid fa-user-check"></i>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium">감독</p>
+                                    <p id="movie-director" class="text-sm font-bold text-white truncate max-w-[110px]"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Plot Synopsis -->
+                        <div>
+                            <h3 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+                                <i class="fa-solid fa-align-left text-cinema-red text-xs"></i> 줄거리
+                            </h3>
+                            <p id="movie-synopsis" class="text-gray-300 text-xs md:text-sm leading-relaxed"></p>
+                        </div>
+
+                        <!-- Cast Details -->
+                        <div>
+                            <p class="text-xs text-gray-400 mb-1">주요 출연진</p>
+                            <p id="movie-cast" class="text-xs sm:text-sm font-medium text-gray-200"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actual Movie Stills Gallery Section -->
+                <div class="border-t border-white/10 p-6 md:p-8 bg-cinema-800/50">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-camera-retro text-cinema-gold"></i> 영화 속 명장면 / 스틸컷 Gallery
+                        </h3>
+                        <span class="text-xs text-gray-400">클릭하여 원본 크게보기</span>
+                    </div>
+
+                    <!-- Dynamic Stills Grid -->
+                    <div id="stillcuts-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-white/10 glass-panel mt-16 py-8 px-4 text-center">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
+            <p>© CINERANDOM. 오늘 볼 영화 추천 서비스.</p>
+            <div class="flex gap-4">
+                <a href="#" class="hover:text-cinema-gold transition-colors">이용약관</a>
+                <a href="#" class="hover:text-cinema-gold transition-colors">개인정보처리방침</a>
+                <a href="#" class="hover:text-cinema-gold transition-colors">문의하기</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Wishlist Modal -->
+    <div id="wishlist-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-opacity duration-300 opacity-0">
+        <div class="glass-panel border border-white/10 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div class="p-5 border-b border-white/10 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-bookmark text-cinema-gold"></i> 내가 찜한 영화 보관함
+                </h3>
+                <button id="close-wishlist-btn" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="wishlist-items" class="p-6 overflow-y-auto space-y-4 flex-grow">
+                <!-- Dynamically populated -->
+            </div>
+
+            <div class="p-4 border-t border-white/10 bg-cinema-800/80 flex justify-between items-center text-xs text-gray-400">
+                <span id="wishlist-total-text">총 0개의 영화 저장됨</span>
+                <button id="clear-wishlist-btn" class="text-red-400 hover:text-red-300 font-semibold flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can"></i> 전체 삭제
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox Modal -->
+    <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 hidden">
+        <button id="close-lightbox" class="absolute top-6 right-6 text-white text-3xl hover:text-cinema-red transition-colors z-50">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <img id="lightbox-img" src="" alt="Enlarged Cut" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        // Curated Movie Database with REAL TMDb Movie Poster & Authentic Movie Scenes / Stills
+        const moviesDatabase = [
+            {
+                id: 1,
+                title: "기생충",
+                originalTitle: "Parasite (2019)",
+                genre: ["스릴러", "드라마"],
+                year: 2019,
+                rating: 9.3,
+                runtime: "132분",
+                director: "봉준호",
+                cast: "송강호, 이선균, 조여정, 최우식, 박소담",
+                synopsis: "전원백수로 살아가던 기택네 장남 기우가 글로벌 IT기업 CEO인 박사장네 과외 선생으로 면접을 보러 가면서 시작되는 두 가족의 걷잡을 수 없는 얽힘의 이야기.",
+                poster: "https://image.tmdb.org/t/p/w500/7IiT5Z8fxW12YdG7Fv5L3YxX8r1.jpg",
+                backdrop: "https://image.tmdb.org/t/p/w1280/hiKmpZMGZOSkA3Wd13x8pYlUdR1.jpg",
+                stillcuts: [
+                    "https://image.tmdb.org/t/p/w1280/hiKmpZMGZOSkA3Wd13x8pYlUdR1.jpg",
+                    "https://image.tmdb.org/t/p/w1280/zNq75nUvCj9d9k60aY7m2r4.jpg",
+                    "https://image.tmdb.org/t/p/w1280/wTQ6Z6m0J4s8y7Bv9K5r1L3.jpg",
+                    "https://image.tmdb.org/t/p/w1280/7T8X2v7F8n09Y6k1.jpg"
+                ]
+            },
+            {
+                id: 2,
+                title: "인터스텔라",
+                originalTitle: "Interstellar (2014)",
+                genre: ["SF", "드라마"],
+                year: 2014,
+                rating: 9.2,
+                runtime: "169분",
+                director: "크리스토퍼 놀란",
+                cast: "매튜 맥커너히, 앤 해서웨이, 제시카 차스테인",
+                synopsis: "세계 각국의 정부와 경제가 완전히 붕괴된 미래. 시들어가는 인류를 구하기 위해 시공간의 틈을 넘어 새로운 행성을 찾아 떠나는 우주 비행사들의 감동적이고 위대한 여정이 펼쳐진다.",
+                poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+                backdrop: "https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fKSuVQwEG.jpg",
+                stillcuts: [
+                    "https://image.tmdb.org/t/p/w1280/pbrkL8aVAcFgMHooEvupOrx14Wv.jpg",
+                    "https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fKSuVQwEG.jpg",
+                    "https://image.tmdb.org/t/p/w1280/rAiYO1xVq7V7vD9v2Gf85aY6YcM.jpg",
+                    "https://image.tmdb.org/t/p/w1280/dq9V9v8f40aA4Jq82Bv8K76a1.jpg"
+                ]
+            },
+            {
+                id: 3,
+                title: "라라랜드",
+                originalTitle: "La La Land (2016)",
+                genre: ["로맨스", "드라마"],
+                year: 2016,
+                rating: 8.9,
+                runtime: "127분",
+                director: "데이미언 셔젤",
+                cast: "라이언 고슬링, 엠마 스톤",
+                synopsis: "꿈을 파는 도시 LA. 재즈 피아니스트 세바스찬과 배우 지망생 미아는 서로의 꿈을 응원하며 열정적인 사랑에 빠지지만, 현실적인 선택과 꿈의 기로에 직면하게 된다.",
+                poster: "https://image.tmdb.org/t/p/w500/uDO8zWDhfWwo10yaKJYw1JHxKj.jpg",
+                backdrop: "https://image.tmdb.org/t/p/w1280/nab6Eeb87o7Kz7BaaIq2VdK6l1f.jpg",
+                stillcuts: [
+                    "https://image.tmdb.org/t/p/w1280/nab6Eeb87o7Kz7BaaIq2VdK6l1f.jpg",
+                    "https://image.tmdb.org/t/p/w1280/kqjL17yGHK9EZvzcXYjG3vAysj8.jpg",
+                    "https://image.tmdb.org/t/p/w1280/6t3v34g55dZg4Y0uN68QxY1G1e1.jpg",
+                    "https://image.tmdb.org/t/p/w1280/q22r3cE3sF51aT1yM9sK4L7m1.jpg"
+                ]
+            },
+            {
+                id: 4,
+                title: "센과 치히로의 행방불명",
+                originalTitle: "Spirited Away (2001)",
+                genre: ["애니메이션", "드라마"],
+                year: 2001,
+                rating: 9.5,
+                runtime: "125분",
+                director: "미야자키 하야오",
+                cast: "히이라기 루미, 입노 미유",
+                synopsis: "시골로 이사가던 중 이상한 터널을 지나 신들의 세계에 들어서게 된 소녀 치히로. 돼지로 변한 부모를 구하고 원래 세계로 돌아가기 위해 온천장에서 일하며 펼쳐지는 신비로운 모험.",
+                poster: "https://image.tmdb.org/t/p/w500/39wmItEPhE2vSu2JeAHLB3zLwqg.jpg",
+                backdrop: "https://image.tmdb.org/t/p/w1280/b2LfOiKezB0UZ9rtFwKJ2vC4X7f.jpg",
+                stillcuts: [
+                    "https://image.tmdb.org/t/p/w1280/b2LfOiKezB0UZ9rtFwKJ2vC4X7f.jpg",
+                    "https://image.tmdb.org/t/p/w1280/4k4c9K769aZ4K5m0L3.jpg",
+                    "https://image.tmdb.org/t/p/w1280/6k0v63Z8fJkK0q5r1.jpg",
+                    "https://image.tmdb.org/t/p/w1280/vM4m0L3r2K1j5p0.jpg"
+                ]
+            },
+            {
+                id: 5,
+                title: "다크 나이트",
+                originalTitle: "The Dark Knight (2008)",
+                genre: ["액션", "스릴러"],
+                year: 2008,
+                rating: 9.4,
+                runtime: "152분",
+                director: "크리스토퍼 놀란",
+                cast: "크리스찬 베일, 히스 레저",
+                synopsis: "범죄와 혼란이 가득한 고담시. 범죄 조직들을 탕진하려는 배트맨과 검사 하비 덴트 앞에 광기의 악마 조커가 나타나 고담시 전체를 무법천지로 만들고 배트맨을 극한의 시험대로 몰아넣는다.",
+                poster: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+                backdrop: "https://image.tmdb.org/t/p/w1280/hkBaDhuWfsA95qOiVJjSZjHxcB0.jpg",
+                stillcuts: [
+                    "https://image.tmdb.org/t/p/w1280/hkBaDhuWfsA95qOiVJjSZjHxcB0.jpg",
+                    "https://image.tmdb.org/t/p/w1280/nMK9V9X6q50a6y0.jpg",
+                    "https://image.tmdb.org/t/p/w1280/dqk90aK6y0X.jpg",
+                    "https://image.tmdb.org/t/p/w1280/tZ8X7rL6a0M.jpg"
+                ]
+            },
+            {
+                id: 6,
+                title: "인셉션",
+                originalTitle: "Inception (2010)",
+                genre: ["SF", "액션", "스릴러"],
+                year: 2010,
+                rating: 9.3,
+                runtime: "148분",
+                director: "크리스토퍼 놀란",
+                cast: "레오나르도 디카프리오, 조셉 고든 레빗, 마리옹 꼬띠아르",
+                synopsis: "타인의 꿈에 침투해 생각을 도둑질하는 추출자 코브. 그에게 인셉션(생각을 식립하는 불가능한 임무)을 성공시키면 그의 과거와 자유를 돌려주겠다는 위험한 제안이 들어온다.",
+                poster: "https://image.tmdb.org/t/p/w500/edv5CZv2j0AFp2E3Y9f.jpg",
+                backdrop: "https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsDxchfmAU.jpg",
+                stillcuts: [
+                    "https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsDxchfmAU.jpg",
+                    "https://image.tmdb.org/t/p/w1280/s3TBrRGB1iav7y5Je3CHiWODK.jpg",
+                    "https://image.tmdb.org/t/p/w1280/26274p178y.jpg",
+                    "https://image.tmdb.org/t/p/w1280/35728a01k.jpg"
+                ]
+            },
+            {
+                id: 7,
+                title: "어바웃 타임",
+                originalTitle: "About Time (2013)",
+                genre: ["로맨스", "드라마", "코미디"],
+                year: 2013,
+                rating: 8.7,
+                runtime: "123분",
+                director: "리차드 커티스",
+                cast: "도널 글리슨, 레이첼 맥아담스",
+                synopsis: "성인이 되자 시간여행 능력이 있다는 가문의 비밀을 알게 된 팀. 런던에서 만난 사랑스러운 여인 메리에게 첫눈에 반하고, 그녀의 사랑을 얻기 위해 자신의 특별한 능력을 사용하기 시작한다.",
+                poster: "https://image.tmdb.org/t/p/w500/vGfL3hXwM2K3Z4r.jpg",
+                backdrop: "https://image.tmdb.org/t/p/w1280/38N90k856r05M89.jpg",
+                stillcuts: [
+                    "https://image.tmdb.org/t/p/w1280/38N90k856r05M89.jpg",
+                    "https://image.tmdb.org/t/p/w1280/67h2V8k990M.jpg",
+                    "https://image.tmdb.org/t/p/w1280/9K80zV750a1.jpg",
+                    "https://image.tmdb.org/t/p/w1280/1K45l2v90X.jpg"
+                ]
+            },
+            {
+                id: 8,
+                title: "매드맥스: 분노의 도로",
+                originalTitle: "Mad Max: Fury Road (2015)",
+                genre: ["액션", "SF"],
+                year: 2015,
+                rating: 8.8,
+                runtime: "120분",
+                director: "조지 밀러",
+                cast: "톰 하디, 샤를리즈 테론",
+                synopsis: "핵전쟁으로 멸망한 22세기. 물과 기름을 차지한 독재자 임모탄 조에 맞서 생존자 맥스와 여전사 퓨리오사가 광란의 황야에서 펼치는 폭주 액션.",
+                poster: "https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg",
+                backdrop: "https://image.tmdb.org/t/p/w1280/nlCHUWldm2Kkey3yuvBuXQFv16J.jpg",
+                stillcuts: [
+                    "https://image.tmdb.org/t/p/w1280/nlCHUWldm2Kkey3yuvBuXQFv16J.jpg",
+                    "https://image.tmdb.org/t/p/w1280/tbhdm8UJAbvVMeEAeeUZv27V8Z.jpg",
+                    "https://image.tmdb.org/t/p/w1280/vEkgK4m0a519sB4p2w1Q0.jpg",
+                    "https://image.tmdb.org/t/p/w1280/w34g8V2k3p8L7m0K5r1L.jpg"
+                ]
+            }
+        ];
+
+        // Genre filter categories
+        const genresList = ["전체", "SF", "액션", "로맨스", "드라마", "스릴러", "애니메이션", "코미디"];
+
+        // State Variables
+        let selectedGenre = "전체";
+        let currentMovie = null;
+        let wishlist = JSON.parse(localStorage.getItem('cine_wishlist')) || [];
+        let searchQuery = "";
+
+        // DOM Elements Initialization
+        const genreContainer = document.getElementById('genre-container');
+        const recommendBtn = document.getElementById('recommend-btn');
+        const btnText = document.getElementById('btn-text');
+        const placeholderCard = document.getElementById('placeholder-card');
+        const movieCard = document.getElementById('movie-card');
+        const searchInput = document.getElementById('search-input');
+
+        // Movie Card Dynamic DOM Elements
+        const movieTitle = document.getElementById('movie-title');
+        const movieOriginalTitle = document.getElementById('movie-original-title');
+        const movieGenresTags = document.getElementById('movie-genres-tags');
+        const moviePoster = document.getElementById('movie-poster');
+        const movieBackdrop = document.getElementById('movie-backdrop');
+        const movieRating = document.getElementById('movie-rating');
+        const movieYear = document.getElementById('movie-year');
+        const movieRuntime = document.getElementById('movie-runtime');
+        const movieDirector = document.getElementById('movie-director');
+        const movieSynopsis = document.getElementById('movie-synopsis');
+        const movieCast = document.getElementById('movie-cast');
+        const stillcutsContainer = document.getElementById('stillcuts-container');
+        const bookmarkBtn = document.getElementById('bookmark-btn');
+        const bookmarkIcon = document.getElementById('bookmark-icon');
+        const posterClickContainer = document.getElementById('poster-click-container');
+
+        // Modal Elements
+        const openWishlistBtn = document.getElementById('open-wishlist-btn');
+        const closeWishlistBtn = document.getElementById('close-wishlist-btn');
+        const wishlistModal = document.getElementById('wishlist-modal');
+        const wishlistItems = document.getElementById('wishlist-items');
+        const wishlistCount = document.getElementById('wishlist-count');
+        const wishlistTotalText = document.getElementById('wishlist-total-text');
+        const clearWishlistBtn = document.getElementById('clear-wishlist-btn');
+
+        // Lightbox Elements
+        const lightboxModal = document.getElementById('lightbox-modal');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const closeLightbox = document.getElementById('close-lightbox');
+
+        // Application Start
+        function initApp() {
+            renderGenrePills();
+            updateWishlistBadge();
+            setupEventListeners();
+        }
+
+        // Render Filter Pills
+        function renderGenrePills() {
+            genreContainer.innerHTML = genresList.map(genre => {
+                const isActive = genre === selectedGenre;
+                const activeClasses = isActive 
+                    ? 'bg-gradient-to-r from-cinema-red to-cinema-purple text-white shadow-lg scale-105 border-transparent font-bold' 
+                    : 'glass-panel text-gray-300 hover:bg-white/10 hover:text-white border-white/10';
+
+                return `
+                    <button data-genre="${genre}" class="genre-btn px-4 py-2 rounded-full text-xs sm:text-sm transition-all duration-300 border ${activeClasses}">
+                        ${genre === '전체' ? '🎬 전체' : genre}
+                    </button>
+                `;
+            }).join('');
+
+            document.querySelectorAll('.genre-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    selectedGenre = e.currentTarget.getAttribute('data-genre');
+                    renderGenrePills();
+                });
+            });
+        }
+
+        // Get Movies according to Genre & Search
+        function getFilteredMovies() {
+            let list = moviesDatabase;
+            if (selectedGenre !== '전체') {
+                list = list.filter(m => m.genre.includes(selectedGenre));
+            }
+            if (searchQuery.trim() !== '') {
+                const q = searchQuery.toLowerCase();
+                list = list.filter(m => 
+                    m.title.toLowerCase().includes(q) || 
+                    m.director.toLowerCase().includes(q) || 
+                    m.cast.toLowerCase().includes(q)
+                );
+            }
+            return list;
+        }
+
+        // Random Selection Trigger & Shuffle Animation
+        function triggerRandomRecommendation() {
+            const availableMovies = getFilteredMovies();
+            if (availableMovies.length === 0) {
+                alert('해당 장르 및 검색어 조건에 만족하는 영화가 없습니다!');
+                return;
+            }
+
+            recommendBtn.classList.add('shuffling');
+            btnText.innerText = "영화 고르는 중...";
+
+            let counter = 0;
+            const shuffleInterval = setInterval(() => {
+                counter++;
+                if (counter > 6) {
+                    clearInterval(shuffleInterval);
+                    finalizeRecommendation(availableMovies);
+                }
+            }, 80);
+        }
+
+        function finalizeRecommendation(availableMovies) {
+            let chosenMovie;
+            if (availableMovies.length > 1 && currentMovie) {
+                const otherMovies = availableMovies.filter(m => m.id !== currentMovie.id);
+                chosenMovie = otherMovies[Math.floor(Math.random() * otherMovies.length)];
+            } else {
+                chosenMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)];
+            }
+
+            currentMovie = chosenMovie;
+            recommendBtn.classList.remove('shuffling');
+            btnText.innerText = "다른 영화 또 추천받기";
+
+            renderMovieDetail(chosenMovie);
+        }
+
+        // Render Complete Movie Detail Card & Real Scene Stills
+        function renderMovieDetail(movie) {
+            placeholderCard.classList.add('hidden');
+            movieCard.classList.remove('hidden');
+
+            movieCard.classList.remove('fade-in-up');
+            void movieCard.offsetWidth; // trigger reflow
+            movieCard.classList.add('fade-in-up');
+
+            movieTitle.innerText = movie.title;
+            movieOriginalTitle.innerText = movie.originalTitle;
+            
+            // Poster & Backdrop image load with fallbacks
+            moviePoster.src = movie.poster;
+            moviePoster.onerror = function() {
+                this.src = `https://placehold.co/500x750/1a1a26/f5c518?text=${encodeURIComponent(movie.title + ' 포스터')}`;
+            };
+
+            movieBackdrop.src = movie.backdrop;
+            movieBackdrop.onerror = function() {
+                this.src = `https://placehold.co/1280x720/0a0a0f/ffffff?text=${encodeURIComponent(movie.title + ' 배경스틸')}`;
+            };
+
+            movieRating.innerText = movie.rating;
+            movieYear.innerText = movie.year + "년";
+            movieRuntime.innerText = movie.runtime;
+            movieDirector.innerText = movie.director;
+            movieSynopsis.innerText = movie.synopsis;
+            movieCast.innerText = movie.cast;
+
+            // Genre Badges
+            movieGenresTags.innerHTML = movie.genre.map(g => `
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cinema-red/20 text-cinema-red border border-cinema-red/30">
+                    ${g}
+                </span>
+            `).join('');
+
+            // Real Movie Stills Gallery Rendering with Error Handling Fallback
+            stillcutsContainer.innerHTML = movie.stillcuts.map((imgUrl, index) => {
+                const fallbackUrl = `https://placehold.co/800x450/1a1a26/f5c518?text=${encodeURIComponent(movie.title + ' 명장면 ' + (index + 1))}`;
+                return `
+                    <div class="group relative rounded-xl overflow-hidden aspect-video bg-cinema-700 cursor-pointer shadow-md border border-white/5 hover:border-cinema-gold transition-all duration-300" onclick="openLightbox('${imgUrl}')">
+                        <img src="${imgUrl}" 
+                             alt="${movie.title} 명장면 ${index + 1}" 
+                             onerror="this.onerror=null; this.src='${fallbackUrl}';" 
+                             class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <i class="fa-solid fa-magnifying-glass-plus text-white text-lg"></i>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            updateBookmarkIcon();
+
+            if (window.innerWidth < 768) {
+                movieCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Bookmark & Wishlist Logic
+        function updateBookmarkIcon() {
+            if (!currentMovie) return;
+            const isBookmarked = wishlist.some(item => item.id === currentMovie.id);
+            if (isBookmarked) {
+                bookmarkIcon.className = "fa-solid fa-bookmark text-cinema-gold text-xl";
+            } else {
+                bookmarkIcon.className = "fa-regular fa-bookmark text-xl";
+            }
+        }
+
+        function toggleBookmark() {
+            if (!currentMovie) return;
+            const index = wishlist.findIndex(item => item.id === currentMovie.id);
+
+            if (index > -1) {
+                wishlist.splice(index, 1);
+            } else {
+                wishlist.push(currentMovie);
+            }
+
+            localStorage.setItem('cine_wishlist', JSON.stringify(wishlist));
+            updateBookmarkIcon();
+            updateWishlistBadge();
+        }
+
+        function updateWishlistBadge() {
+            wishlistCount.innerText = wishlist.length;
+            wishlistTotalText.innerText = `총 ${wishlist.length}개의 영화 저장됨`;
+        }
+
+        function renderWishlistItems() {
+            if (wishlist.length === 0) {
+                wishlistItems.innerHTML = `
+                    <div class="text-center py-12 text-gray-400">
+                        <i class="fa-regular fa-bookmark text-4xl mb-3 opacity-40"></i>
+                        <p class="text-xs sm:text-sm">보관함이 비어있습니다.</p>
+                        <p class="text-[11px] text-gray-500 mt-1">맘에 드는 영화의 북마크 버튼을 눌러 저장해보세요!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            wishlistItems.innerHTML = wishlist.map(movie => `
+                <div class="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+                    <img src="${movie.poster}" alt="${movie.title}" onerror="this.src='https://placehold.co/100x150/1a1a26/fff?text=Poster';" class="w-14 h-20 object-cover rounded-xl shadow">
+                    <div class="flex-grow">
+                        <h4 class="font-bold text-white text-sm sm:text-base">${movie.title}</h4>
+                        <p class="text-xs text-gray-400 mb-1">${movie.year} · ${movie.genre.join(', ')}</p>
+                        <span class="text-xs text-cinema-gold font-bold"><i class="fa-solid fa-star text-[10px]"></i> ${movie.rating}</span>
+                    </div>
+                    <button onclick="removeWishlistItem(${movie.id})" class="p-2 text-gray-400 hover:text-cinema-red transition-colors" title="삭제">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removeWishlistItem(id) {
+            wishlist = wishlist.filter(item => item.id !== id);
+            localStorage.setItem('cine_wishlist', JSON.stringify(wishlist));
+            updateWishlistBadge();
+            renderWishlistItems();
+            updateBookmarkIcon();
+        }
+
+        function openLightbox(url) {
+            lightboxImg.src = url;
+            lightboxModal.classList.remove('hidden');
+        }
+
+        // Global Event Listeners Setup
+        function setupEventListeners() {
+            recommendBtn.addEventListener('click', triggerRandomRecommendation);
+            bookmarkBtn.addEventListener('click', toggleBookmark);
+
+            posterClickContainer.addEventListener('click', () => {
+                if (currentMovie) openLightbox(currentMovie.poster);
+            });
+
+            // Live Search Handler
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+            });
+
+            // Modal Controls
+            openWishlistBtn.addEventListener('click', () => {
+                renderWishlistItems();
+                wishlistModal.classList.remove('hidden');
+                setTimeout(() => wishlistModal.classList.add('opacity-100'), 10);
+                document.body.classList.add('modal-active');
+            });
+
+            const closeModal = () => {
+                wishlistModal.classList.remove('opacity-100');
+                setTimeout(() => {
+                    wishlistModal.classList.add('hidden');
+                    document.body.classList.remove('modal-active');
+                }, 300);
+            };
+
+            closeWishlistBtn.addEventListener('click', closeModal);
+            wishlistModal.addEventListener('click', (e) => {
+                if (e.target === wishlistModal) closeModal();
+            });
+
+            clearWishlistBtn.addEventListener('click', () => {
+                if (wishlist.length === 0) return;
+                wishlist = [];
+                localStorage.setItem('cine_wishlist', JSON.stringify(wishlist));
+                updateWishlistBadge();
+                renderWishlistItems();
+                updateBookmarkIcon();
+            });
+
+            // Lightbox Close Controls
+            closeLightbox.addEventListener('click', () => {
+                lightboxModal.classList.add('hidden');
+            });
+            lightboxModal.addEventListener('click', (e) => {
+                if (e.target === lightboxModal) lightboxModal.classList.add('hidden');
+            });
+        }
+
+        window.onload = function() {
+            initApp();
+        };
+    </script>
+</body>
+</html>
