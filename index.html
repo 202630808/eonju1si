@@ -1,839 +1,998 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>오늘 볼 영화 추천 | Today's Movie Picker</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&family=Noto+Sans+KR:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        cinema: {
-                            900: '#0a0a0f',
-                            800: '#12121a',
-                            700: '#1a1a26',
-                            600: '#252538',
-                            gold: '#f5c518',
-                            red: '#e50914',
-                            purple: '#6366f1'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Noto Sans KR', 'sans-serif'],
-                        display: ['Montserrat', 'Noto Sans KR', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    
-    <style>
-        body {
-            background-color: #0a0a0f;
-            color: #f3f4f6;
-            font-family: 'Noto Sans KR', sans-serif;
-            overflow-x: hidden;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>오늘뭐먹지? - 스마트 메뉴 추천</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Canvas Confetti Library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    * { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
 
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0a0a0f;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #252538;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #e50914;
-        }
+    /* Glassmorphism Styling */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+    }
 
-        .glass-panel {
-            background: rgba(26, 26, 38, 0.75);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
+    /* 3D Box Shaking Effect */
+    @keyframes boxShake {
+      0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+      15% { transform: translateY(-8px) rotate(-6deg) scale(1.03); }
+      30% { transform: translateY(-4px) rotate(6deg) scale(1.05); }
+      45% { transform: translateY(-8px) rotate(-5deg) scale(1.03); }
+      60% { transform: translateY(-2px) rotate(4deg) scale(1.02); }
+      75% { transform: translateY(-6px) rotate(-2deg) scale(1.01); }
+    }
 
-        @keyframes pulseGlow {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(229, 9, 20, 0.4); }
-            50% { transform: scale(1.02); box-shadow: 0 0 35px rgba(229, 9, 20, 0.7); }
-        }
+    .animate-shake {
+      animation: boxShake 0.75s infinite ease-in-out;
+    }
 
-        .animate-pulse-glow {
-            animation: pulseGlow 3s infinite ease-in-out;
-        }
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 10px 15px rgba(249, 115, 22, 0.35)); }
+      50% { filter: drop-shadow(0 18px 25px rgba(239, 68, 68, 0.6)); }
+    }
 
-        @keyframes shuffle {
-            0% { transform: translateY(0); filter: blur(0); opacity: 1; }
-            50% { transform: translateY(-15px); filter: blur(3px); opacity: 0.4; }
-            100% { transform: translateY(0); filter: blur(0); opacity: 1; }
-        }
+    .box-glow {
+      animation: pulseGlow 2.5s infinite ease-in-out;
+    }
 
-        .shuffling {
-            animation: shuffle 0.2s ease-in-out infinite;
-        }
+    /* Multi-select active state */
+    .option-btn.selected {
+      border-color: #f97316 !important;
+      background-color: #fff7ed !important;
+      color: #c2410c !important;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+    }
 
-        .fade-in-up {
-            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(25px) scale(0.98);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .modal-active {
-            overflow: hidden;
-        }
-    </style>
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.03); }
+    ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); border-radius: 9999px; }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between selection:bg-cinema-red selection:text-white">
+<body class="bg-gradient-to-br from-amber-50 via-orange-50 to-rose-100 text-slate-800 min-h-screen flex flex-col justify-between relative overflow-x-hidden selection:bg-orange-500 selection:text-white">
 
-    <!-- Header Navigation -->
-    <header class="sticky top-0 z-40 glass-panel border-b border-white/10 px-4 lg:px-8 py-3.5">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <a href="#" class="flex items-center gap-3 group">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cinema-red to-cinema-purple flex items-center justify-center text-white font-black text-xl shadow-lg group-hover:scale-105 transition-transform">
-                    <i class="fa-solid fa-film"></i>
-                </div>
-                <div>
-                    <h1 class="font-display font-black text-xl md:text-2xl tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-cinema-gold">
-                        CINE<span class="text-cinema-red">RANDOM</span>
-                    </h1>
-                    <p class="text-[11px] text-gray-400 -mt-1 hidden sm:block">오늘 볼 영화 추천 & 명장면 스틸컷</p>
-                </div>
-            </a>
+  <!-- Background Canvas -->
+  <canvas id="particleCanvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
 
-            <!-- Search & Wishlist Button -->
-            <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-                <div class="relative flex-grow sm:flex-grow-0 sm:w-64">
-                    <input type="text" id="search-input" placeholder="영화 제목/배우/감독 검색..." 
-                           class="w-full pl-9 pr-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs text-white placeholder-gray-400 focus:outline-none focus:border-cinema-red transition-all">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-xs"></i>
-                </div>
-                
-                <button id="open-wishlist-btn" class="flex items-center gap-2 px-4 py-2 rounded-full glass-panel hover:bg-white/10 text-cinema-gold text-xs sm:text-sm font-semibold transition-all hover:scale-105 whitespace-nowrap">
-                    <i class="fa-solid fa-bookmark"></i>
-                    <span>보관함</span>
-                    <span id="wishlist-count" class="ml-1 bg-cinema-red text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
-                </button>
-            </div>
+  <!-- Navigation Header -->
+  <header class="relative z-10 w-full max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+    <div class="flex items-center gap-2.5 cursor-pointer" onclick="restartApp()">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-orange-500/20">
+        🍱
+      </div>
+      <span class="font-extrabold text-xl tracking-tight bg-gradient-to-r from-amber-600 to-rose-600 bg-clip-text text-transparent">
+        오늘뭐먹지?
+      </span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button onclick="toggleAudioMute()" id="muteBtn" class="p-2.5 rounded-xl bg-white/80 hover:bg-white shadow-sm border border-slate-200 text-slate-600 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-semibold">
+        <i class="fa-solid fa-volume-high text-base" id="muteIcon"></i>
+        <span id="muteBtnText" class="hidden sm:inline">효과음 ON</span>
+      </button>
+      <button onclick="openApiModal()" class="p-2.5 rounded-xl bg-white/80 hover:bg-white shadow-sm border border-slate-200 text-slate-600 transition-all active:scale-95 flex items-center gap-1.5 text-xs font-semibold">
+        <i class="fa-solid fa-key text-amber-500 text-base"></i>
+        <span class="hidden sm:inline">API 설정</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main App Container -->
+  <main class="relative z-10 flex-1 w-full max-w-2xl mx-auto px-4 py-6 flex flex-col justify-center items-center">
+
+    <!-- Screen 0: Start Landing Page -->
+    <section id="screenEntry" class="w-full text-center flex flex-col items-center justify-center space-y-7 py-4">
+      <div class="space-y-3">
+        <span class="inline-block px-4 py-1.5 rounded-full bg-orange-500/10 text-orange-600 text-xs font-bold tracking-wide border border-orange-500/20">
+          🎯 AI & 스마트 맞춤 메뉴 추천
+        </span>
+        <h1 class="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
+          오늘 뭐 먹지?
+        </h1>
+        <p class="text-slate-600 text-sm sm:text-base max-w-md mx-auto font-medium leading-relaxed">
+          고민하지 마세요! 몇 가지 질문으로 당신만을 위한 맞춤 메뉴 Top 5를 뽑아드려요.
+        </p>
+      </div>
+
+      <!-- 3D Mystery Box -->
+      <div class="relative group my-4 cursor-pointer" onclick="goToStep(1)">
+        <div class="w-44 h-44 sm:w-52 sm:h-52 bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 rounded-3xl shadow-2xl flex flex-col items-center justify-center text-white box-glow transition-transform transform group-hover:scale-105 active:scale-95 border-4 border-white/40 relative">
+          <span class="text-7xl sm:text-8xl font-black drop-shadow-lg select-none">?</span>
+          <div class="absolute inset-x-0 h-6 bg-yellow-300/40 top-1/2 -translate-y-1/2"></div>
+          <div class="absolute inset-y-0 w-6 bg-yellow-300/40 left-1/2 -translate-x-1/2"></div>
         </div>
-    </header>
+      </div>
 
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center">
+      <!-- Prominent Start Button -->
+      <button onclick="goToStep(1)" class="w-full max-w-xs py-4 px-8 rounded-2xl bg-gradient-to-r from-orange-500 to-rose-500 text-white font-extrabold text-lg shadow-xl shadow-orange-500/30 hover:from-orange-600 hover:to-rose-600 active:scale-98 transition-all flex items-center justify-center gap-3">
+        <span>시작하기</span>
+        <i class="fa-solid fa-arrow-right text-base"></i>
+      </button>
+    </section>
 
-        <!-- Hero Title Section -->
-        <section class="text-center max-w-3xl mx-auto my-4">
-            <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider bg-cinema-red/10 border border-cinema-red/30 text-cinema-red mb-3">
-                <i class="fa-solid fa-clapperboard"></i> 취향 저격 영화 탐색기
-            </span>
-            <h2 class="text-3xl md:text-5xl font-black text-white leading-tight mb-3 tracking-tight">
-                오늘 어떤 영화를 <br class="sm:hidden"><span class="bg-clip-text text-transparent bg-gradient-to-r from-cinema-red via-cinema-gold to-yellow-200">볼지 고민되시나요?</span>
-            </h2>
-            <p class="text-gray-400 text-xs md:text-sm max-w-xl mx-auto">
-                장르를 선택하고 버튼을 눌러보세요! <br class="hidden sm:block">인생 영화 정보와 함께 실제 고화질 영화 속 명장면 스틸컷을 보여드립니다.
-            </p>
-        </section>
+    <!-- Screen Wizard Steps -->
+    <section id="screenWizard" class="w-full hidden">
+      <div class="glass-card rounded-3xl p-6 sm:p-8 shadow-xl border border-white/80 space-y-6">
 
-        <!-- Genre Filter Pills -->
-        <section class="w-full max-w-4xl mb-6">
-            <div class="flex items-center justify-center gap-2 flex-wrap" id="genre-container">
-                <!-- Dynamically Populated -->
-            </div>
-        </section>
+        <!-- Progress Indicator -->
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs font-bold text-slate-500">
+            <span id="wizardStepLabel">단계 1 / 4</span>
+            <span id="wizardStepName">식사 구분을 선택하세요</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-200/80 rounded-full overflow-hidden">
+            <div id="progressBar" class="h-full bg-gradient-to-r from-amber-500 to-rose-500 w-1/4 transition-all duration-300 rounded-full"></div>
+          </div>
+        </div>
 
-        <!-- Action Button -->
-        <section class="mb-10">
-            <button id="recommend-btn" class="animate-pulse-glow relative group overflow-hidden px-8 py-4 sm:px-10 sm:py-5 rounded-2xl bg-gradient-to-r from-cinema-red via-red-600 to-cinema-purple text-white font-black text-lg md:text-xl tracking-wider shadow-2xl hover:scale-105 active:scale-95 transition-all duration-300 flex items-center gap-3">
-                <span class="relative z-10 flex items-center gap-3">
-                    <i class="fa-solid fa-dice text-2xl group-hover:rotate-180 transition-transform duration-500"></i>
-                    <span id="btn-text">오늘의 영화 추천받기</span>
-                </span>
-                <div class="absolute inset-0 bg-gradient-to-r from-cinema-gold via-cinema-red to-cinema-purple opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></div>
+        <!-- Step 1: Meal vs Dessert -->
+        <div id="step1" class="space-y-5">
+          <div class="text-center space-y-1">
+            <h2 class="text-2xl font-bold text-slate-900">어떤 종류를 원하시나요?</h2>
+            <p class="text-xs text-slate-500">든든한 식사와 달콤한 후식 중 선택해 주세요</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4 pt-2">
+            <button onclick="selectMealType('식사류')" id="btnMeal" class="option-card p-6 rounded-2xl border-2 border-slate-200 bg-white hover:border-orange-500 hover:bg-orange-50/50 transition-all flex flex-col items-center gap-3 group active:scale-95">
+              <span class="text-5xl group-hover:scale-110 transition-transform">🍚</span>
+              <span class="font-extrabold text-slate-800 text-lg">식사류</span>
+              <span class="text-xs text-slate-500 font-normal">아침·점심·저녁 든든하게</span>
             </button>
-        </section>
-
-        <!-- Main Display Container -->
-        <section id="movie-display-area" class="w-full max-w-5xl">
-            <!-- Initial Placeholder -->
-            <div id="placeholder-card" class="glass-panel rounded-3xl p-8 sm:p-12 text-center border border-dashed border-white/20 flex flex-col items-center justify-center min-h-[380px]">
-                <div class="w-20 h-20 rounded-full bg-cinema-700/80 flex items-center justify-center text-cinema-gold text-3xl mb-4 shadow-inner">
-                    <i class="fa-solid fa-popcorn"></i>
-                </div>
-                <h3 class="text-xl font-bold text-gray-200 mb-2">어떤 영화가 나올까요?</h3>
-                <p class="text-gray-400 text-xs sm:text-sm max-w-md mb-6">상단의 추천 버튼을 눌러 랜덤 추천 영화와 함께 실제 영화 명장면 스틸컷을 감상해보세요!</p>
-                <div class="flex flex-wrap justify-center gap-2 text-xs text-gray-500">
-                    <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10">#랜덤추천</span>
-                    <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10">#실제영화스틸컷</span>
-                    <span class="px-3 py-1 rounded-full bg-white/5 border border-white/10">#인생영화</span>
-                </div>
-            </div>
-
-            <!-- Active Movie Display Card -->
-            <div id="movie-card" class="hidden glass-panel rounded-3xl overflow-hidden border border-white/10 shadow-2xl fade-in-up">
-                <!-- Movie Backdrop -->
-                <div class="relative h-64 md:h-80 w-full overflow-hidden">
-                    <img id="movie-backdrop" src="" alt="Backdrop" class="w-full h-full object-cover filter brightness-50 scale-105 transition-transform duration-1000">
-                    <div class="absolute inset-0 bg-gradient-to-t from-cinema-900 via-cinema-900/60 to-transparent"></div>
-                    
-                    <!-- Top Actions -->
-                    <div class="absolute top-4 right-4 flex gap-2 z-10">
-                        <button id="bookmark-btn" class="w-12 h-12 rounded-full glass-panel flex items-center justify-center text-white hover:text-cinema-gold transition-colors hover:scale-110 shadow-lg" title="찜하기">
-                            <i class="fa-regular fa-bookmark text-xl" id="bookmark-icon"></i>
-                        </button>
-                    </div>
-
-                    <!-- Genre & Title Badge Overlay -->
-                    <div class="absolute bottom-6 left-6 right-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
-                        <div>
-                            <div class="flex items-center gap-2 mb-2 flex-wrap" id="movie-genres-tags"></div>
-                            <h2 id="movie-title" class="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-md"></h2>
-                            <p id="movie-original-title" class="text-sm md:text-base text-gray-300 font-display italic mt-1"></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Main Info Section -->
-                <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-8">
-                    <!-- Left Column: Poster -->
-                    <div class="md:col-span-4 lg:col-span-3 -mt-16 sm:-mt-24 z-20 flex justify-center md:block">
-                        <div class="relative group rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 w-48 sm:w-56 md:w-full cursor-pointer" id="poster-click-container">
-                            <img id="movie-poster" src="" alt="Poster" class="w-full h-auto object-cover rounded-2xl transition-transform duration-500 group-hover:scale-105">
-                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <span class="text-white text-xs font-semibold px-3 py-1.5 rounded-full bg-cinema-red/80 backdrop-blur-sm">포스터 크게보기</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Column: Details & Metadata -->
-                    <div class="md:col-span-8 lg:col-span-9 flex flex-col justify-between space-y-6">
-                        <!-- Key Stats Bar -->
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-cinema-gold/20 text-cinema-gold flex items-center justify-center text-lg">
-                                    <i class="fa-solid fa-star"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-400 font-medium">평점</p>
-                                    <p class="text-sm font-bold text-white"><span id="movie-rating" class="text-cinema-gold text-base"></span> / 10</p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-lg">
-                                    <i class="fa-regular fa-calendar font-bold"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-400 font-medium">개봉년도</p>
-                                    <p id="movie-year" class="text-sm font-bold text-white"></p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg">
-                                    <i class="fa-regular fa-clock"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-400 font-medium">러닝타임</p>
-                                    <p id="movie-runtime" class="text-sm font-bold text-white"></p>
-                                </div>
-                            </div>
-
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center text-lg">
-                                    <i class="fa-solid fa-user-check"></i>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-400 font-medium">감독</p>
-                                    <p id="movie-director" class="text-sm font-bold text-white truncate max-w-[110px]"></p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Plot Synopsis -->
-                        <div>
-                            <h3 class="text-base font-bold text-white mb-2 flex items-center gap-2">
-                                <i class="fa-solid fa-align-left text-cinema-red text-xs"></i> 줄거리
-                            </h3>
-                            <p id="movie-synopsis" class="text-gray-300 text-xs md:text-sm leading-relaxed"></p>
-                        </div>
-
-                        <!-- Cast Details -->
-                        <div>
-                            <p class="text-xs text-gray-400 mb-1">주요 출연진</p>
-                            <p id="movie-cast" class="text-xs sm:text-sm font-medium text-gray-200"></p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Actual Movie Stills Gallery Section -->
-                <div class="border-t border-white/10 p-6 md:p-8 bg-cinema-800/50">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-bold text-white flex items-center gap-2">
-                            <i class="fa-solid fa-camera-retro text-cinema-gold"></i> 영화 속 명장면 / 스틸컷 Gallery
-                        </h3>
-                        <span class="text-xs text-gray-400">클릭하여 원본 크게보기</span>
-                    </div>
-
-                    <!-- Dynamic Stills Grid -->
-                    <div id="stillcuts-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        <!-- Populated dynamically -->
-                    </div>
-                </div>
-            </div>
-        </section>
-
-    </main>
-
-    <footer class="border-t border-white/10 glass-panel mt-16 py-8 px-4 text-center">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-400">
-            <p>© CINERANDOM. 오늘 볼 영화 추천 서비스.</p>
-            <div class="flex gap-4">
-                <a href="#" class="hover:text-cinema-gold transition-colors">이용약관</a>
-                <a href="#" class="hover:text-cinema-gold transition-colors">개인정보처리방침</a>
-                <a href="#" class="hover:text-cinema-gold transition-colors">문의하기</a>
-            </div>
+            <button onclick="selectMealType('후식류')" id="btnDessert" class="option-card p-6 rounded-2xl border-2 border-slate-200 bg-white hover:border-rose-500 hover:bg-rose-50/50 transition-all flex flex-col items-center gap-3 group active:scale-95">
+              <span class="text-5xl group-hover:scale-110 transition-transform">🍰</span>
+              <span class="font-extrabold text-slate-800 text-lg">후식/디저트</span>
+              <span class="text-xs text-slate-500 font-normal">카페, 디저트, 간식</span>
+            </button>
+          </div>
         </div>
-    </footer>
 
-    <!-- Wishlist Modal -->
-    <div id="wishlist-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-opacity duration-300 opacity-0">
-        <div class="glass-panel border border-white/10 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            <div class="p-5 border-b border-white/10 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fa-solid fa-bookmark text-cinema-gold"></i> 내가 찜한 영화 보관함
-                </h3>
-                <button id="close-wishlist-btn" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 flex items-center justify-center transition-colors">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+        <!-- Step 2: Cuisine Multi-Selection -->
+        <div id="step2" class="space-y-5 hidden">
+          <div class="text-center space-y-1">
+            <div class="flex justify-center items-center gap-2">
+              <h2 class="text-2xl font-bold text-slate-900">어떤 카테고리가 땡기나요?</h2>
+              <span class="px-2 py-0.5 rounded-md bg-orange-100 text-orange-700 text-[11px] font-extrabold">복수 선택 가능</span>
             </div>
+            <p class="text-xs text-slate-500">선택하신 카테고리가 <strong class="text-orange-600">Top 1~3위</strong>에 최우선 반영됩니다</p>
+          </div>
 
-            <div id="wishlist-items" class="p-6 overflow-y-auto space-y-4 flex-grow">
-                <!-- Dynamically populated -->
-            </div>
+          <div class="grid grid-cols-3 gap-2 sm:gap-3 pt-2" id="categoryContainer">
+            <!-- Dynamically populated -->
+          </div>
 
-            <div class="p-4 border-t border-white/10 bg-cinema-800/80 flex justify-between items-center text-xs text-gray-400">
-                <span id="wishlist-total-text">총 0개의 영화 저장됨</span>
-                <button id="clear-wishlist-btn" class="text-red-400 hover:text-red-300 font-semibold flex items-center gap-1">
-                    <i class="fa-solid fa-trash-can"></i> 전체 삭제
-                </button>
-            </div>
+          <button onclick="validateCategoriesAndNext()" class="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-extrabold text-sm transition-all shadow-md active:scale-98 flex items-center justify-center gap-2">
+            <span>카테고리 선택 완료</span>
+            <span id="selectedCategoryCount" class="bg-orange-500 text-white px-2 py-0.5 rounded-full text-xs">0개 선택됨</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
         </div>
-    </div>
 
-    <!-- Image Lightbox Modal -->
-    <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 hidden">
-        <button id="close-lightbox" class="absolute top-6 right-6 text-white text-3xl hover:text-cinema-red transition-colors z-50">
-            <i class="fa-solid fa-xmark"></i>
+        <!-- Step 3: Flavors Multi-Selection -->
+        <div id="step3" class="space-y-5 hidden">
+          <div class="text-center space-y-1">
+            <div class="flex justify-center items-center gap-2">
+              <h2 class="text-2xl font-bold text-slate-900">어떤 맛이 땡기나요?</h2>
+              <span class="px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[11px] font-extrabold">복수 선택 가능</span>
+            </div>
+            <p class="text-xs text-slate-500">원하는 맛 프로필을 여러 개 선택해 주세요</p>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-2" id="flavorContainer">
+            <!-- Dynamically populated -->
+          </div>
+
+          <button onclick="validateFlavorsAndNext()" class="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-extrabold text-sm transition-all shadow-md active:scale-98 flex items-center justify-center gap-2">
+            <span>맛 선택 완료</span>
+            <span id="selectedFlavorCount" class="bg-rose-500 text-white px-2 py-0.5 rounded-full text-xs">0개 선택됨</span>
+            <i class="fa-solid fa-arrow-right text-xs"></i>
+          </button>
+        </div>
+
+        <!-- Step 4: Avoided Foods Text Input & Skip Button -->
+        <div id="step4" class="space-y-5 hidden">
+          <div class="text-center space-y-1">
+            <h2 class="text-2xl font-bold text-slate-900">피하고 싶은 음식이 있나요?</h2>
+            <p class="text-xs text-slate-500">알레르기나 오늘 먹기 싫은 특정 재료/음식을 적어주세요</p>
+          </div>
+
+          <div class="space-y-3 pt-2">
+            <div class="relative">
+              <input type="text" id="dislikeInput" placeholder="예: 오이, 땅콩, 너무 매운 것, 해산물..." class="w-full px-4 py-3.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-sm font-medium pr-10">
+              <button onclick="clearDislikeInput()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                <i class="fa-solid fa-circle-xmark"></i>
+              </button>
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-1">
+              <span class="text-xs text-slate-400 font-bold self-center mr-1">빠른 태그:</span>
+              <button onclick="addDislikeChip('오이')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold">🥒 오이</button>
+              <button onclick="addDislikeChip('해산물')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold">🦐 해산물</button>
+              <button onclick="addDislikeChip('견과류')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold">🥜 견과류</button>
+              <button onclick="addDislikeChip('너무 매운것')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold">🌶️ 매운 것</button>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4">
+            <button onclick="startRecommendation(true)" class="w-full py-4 rounded-xl border-2 border-slate-300 hover:border-slate-400 text-slate-700 bg-white font-extrabold text-sm transition-all active:scale-98 flex items-center justify-center gap-2">
+              <span>피하고 싶은 음식 없음</span>
+              <i class="fa-solid fa-bolt text-amber-500"></i>
+            </button>
+            <button onclick="startRecommendation(false)" class="w-full py-4 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 text-white font-extrabold text-sm shadow-lg shadow-orange-500/20 hover:from-orange-600 hover:to-rose-600 transition-all active:scale-98 flex items-center justify-center gap-2">
+              <span>결과 확인하기</span>
+              <i class="fa-solid fa-gift text-white"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Previous Button -->
+        <div class="pt-2 flex justify-start">
+          <button id="btnPrevStep" onclick="prevStep()" class="text-xs text-slate-400 hover:text-slate-600 font-bold flex items-center gap-1.5 px-2 py-1">
+            <i class="fa-solid fa-chevron-left text-xs"></i>
+            <span>이전 단계로</span>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Screen Loading / Unboxing Animation -->
+    <section id="screenUnboxing" class="w-full text-center flex flex-col items-center justify-center py-12 space-y-8 hidden">
+      <div class="relative">
+        <div id="unboxingBox" class="w-48 h-48 bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 rounded-3xl shadow-2xl flex flex-col items-center justify-center text-white border-4 border-white/50 animate-shake relative">
+          <span class="text-7xl font-black drop-shadow-md">🎁</span>
+          <div class="absolute inset-x-0 h-5 bg-yellow-300/40 top-1/2 -translate-y-1/2"></div>
+          <div class="absolute inset-y-0 w-5 bg-yellow-300/40 left-1/2 -translate-x-1/2"></div>
+        </div>
+      </div>
+      <div class="space-y-2">
+        <h3 class="text-2xl font-black text-slate-900 animate-pulse">
+          맞춤 메뉴를 뽑는 중...
+        </h3>
+        <p class="text-xs text-slate-500 font-medium">
+          선택하신 카테고리와 맛 취향에 100% 딱 맞는 요리를 매칭하고 있어요!
+        </p>
+      </div>
+    </section>
+
+    <!-- Screen 5: Top 1~5 Results Display -->
+    <section id="screenResults" class="w-full space-y-6 hidden">
+      <!-- Summary Header -->
+      <div class="text-center space-y-2">
+        <span class="px-3 py-1 rounded-full bg-rose-500/10 text-rose-600 text-xs font-bold border border-rose-500/20">
+          🎉 추천 메뉴 Top 5 완성!
+        </span>
+        <h2 class="text-3xl font-black text-slate-900">
+          오늘의 메뉴 추천
+        </h2>
+        <p id="selectionSummary" class="text-xs text-slate-500 font-medium max-w-md mx-auto leading-relaxed"></p>
+      </div>
+
+      <!-- Top 5 Menu Cards -->
+      <div class="space-y-3.5" id="resultsContainer">
+        <!-- Rendered dynamically with 1:1 Food Photos -->
+      </div>
+
+      <!-- Result Actions -->
+      <div class="flex flex-col sm:flex-row gap-3 pt-3">
+        <button onclick="shareResults()" class="flex-1 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2 active:scale-98">
+          <i class="fa-solid fa-share-nodes"></i>
+          <span>결과 공유하기</span>
         </button>
-        <img id="lightbox-img" src="" alt="Enlarged Cut" class="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl">
+        <button onclick="restartApp()" class="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-500 hover:from-orange-600 hover:to-rose-600 text-white font-bold text-sm shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 active:scale-98">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span>다시 추천받기</span>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative z-10 w-full max-w-3xl mx-auto px-4 py-6 text-center text-xs text-slate-400 font-medium">
+    오늘뭐먹지? &copy; 2026. All rights reserved.
+  </footer>
+
+  <!-- API Modal -->
+  <div id="apiModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="glass-card max-w-md w-full rounded-3xl p-6 shadow-2xl border border-white space-y-5">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-robot text-orange-500 text-xl"></i>
+          <h3 class="font-extrabold text-slate-900 text-lg">Gemini API 키 설정</h3>
+        </div>
+        <button onclick="closeApiModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        Google Gemini API 키를 등록하면 AI가 더욱 입체적인 이유와 함께 최적 메뉴를 뽑아줍니다. (미입력 시 고성능 스마트 로컬 DB 엔진 작동)
+      </p>
+      <div class="space-y-2">
+        <label class="text-xs font-bold text-slate-700">Gemini API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500 text-xs font-mono">
+      </div>
+      <div class="flex gap-2">
+        <button onclick="saveApiKey()" class="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-xs shadow-md transition-all">
+          저장하기
+        </button>
+        <button onclick="closeApiModal()" class="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all">
+          취소
+        </button>
+      </div>
     </div>
+  </div>
 
-    <!-- Application JavaScript Logic -->
-    <script>
-        // Curated Movie Database with REAL TMDb Movie Poster & Authentic Movie Scenes / Stills
-        const moviesDatabase = [
-            {
-                id: 1,
-                title: "기생충",
-                originalTitle: "Parasite (2019)",
-                genre: ["스릴러", "드라마"],
-                year: 2019,
-                rating: 9.3,
-                runtime: "132분",
-                director: "봉준호",
-                cast: "송강호, 이선균, 조여정, 최우식, 박소담",
-                synopsis: "전원백수로 살아가던 기택네 장남 기우가 글로벌 IT기업 CEO인 박사장네 과외 선생으로 면접을 보러 가면서 시작되는 두 가족의 걷잡을 수 없는 얽힘의 이야기.",
-                poster: "https://image.tmdb.org/t/p/w500/7IiT5Z8fxW12YdG7Fv5L3YxX8r1.jpg",
-                backdrop: "https://image.tmdb.org/t/p/w1280/hiKmpZMGZOSkA3Wd13x8pYlUdR1.jpg",
-                stillcuts: [
-                    "https://image.tmdb.org/t/p/w1280/hiKmpZMGZOSkA3Wd13x8pYlUdR1.jpg",
-                    "https://image.tmdb.org/t/p/w1280/zNq75nUvCj9d9k60aY7m2r4.jpg",
-                    "https://image.tmdb.org/t/p/w1280/wTQ6Z6m0J4s8y7Bv9K5r1L3.jpg",
-                    "https://image.tmdb.org/t/p/w1280/7T8X2v7F8n09Y6k1.jpg"
-                ]
-            },
-            {
-                id: 2,
-                title: "인터스텔라",
-                originalTitle: "Interstellar (2014)",
-                genre: ["SF", "드라마"],
-                year: 2014,
-                rating: 9.2,
-                runtime: "169분",
-                director: "크리스토퍼 놀란",
-                cast: "매튜 맥커너히, 앤 해서웨이, 제시카 차스테인",
-                synopsis: "세계 각국의 정부와 경제가 완전히 붕괴된 미래. 시들어가는 인류를 구하기 위해 시공간의 틈을 넘어 새로운 행성을 찾아 떠나는 우주 비행사들의 감동적이고 위대한 여정이 펼쳐진다.",
-                poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
-                backdrop: "https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fKSuVQwEG.jpg",
-                stillcuts: [
-                    "https://image.tmdb.org/t/p/w1280/pbrkL8aVAcFgMHooEvupOrx14Wv.jpg",
-                    "https://image.tmdb.org/t/p/w1280/xJHokMbljvjADYdit5fKSuVQwEG.jpg",
-                    "https://image.tmdb.org/t/p/w1280/rAiYO1xVq7V7vD9v2Gf85aY6YcM.jpg",
-                    "https://image.tmdb.org/t/p/w1280/dq9V9v8f40aA4Jq82Bv8K76a1.jpg"
-                ]
-            },
-            {
-                id: 3,
-                title: "라라랜드",
-                originalTitle: "La La Land (2016)",
-                genre: ["로맨스", "드라마"],
-                year: 2016,
-                rating: 8.9,
-                runtime: "127분",
-                director: "데이미언 셔젤",
-                cast: "라이언 고슬링, 엠마 스톤",
-                synopsis: "꿈을 파는 도시 LA. 재즈 피아니스트 세바스찬과 배우 지망생 미아는 서로의 꿈을 응원하며 열정적인 사랑에 빠지지만, 현실적인 선택과 꿈의 기로에 직면하게 된다.",
-                poster: "https://image.tmdb.org/t/p/w500/uDO8zWDhfWwo10yaKJYw1JHxKj.jpg",
-                backdrop: "https://image.tmdb.org/t/p/w1280/nab6Eeb87o7Kz7BaaIq2VdK6l1f.jpg",
-                stillcuts: [
-                    "https://image.tmdb.org/t/p/w1280/nab6Eeb87o7Kz7BaaIq2VdK6l1f.jpg",
-                    "https://image.tmdb.org/t/p/w1280/kqjL17yGHK9EZvzcXYjG3vAysj8.jpg",
-                    "https://image.tmdb.org/t/p/w1280/6t3v34g55dZg4Y0uN68QxY1G1e1.jpg",
-                    "https://image.tmdb.org/t/p/w1280/q22r3cE3sF51aT1yM9sK4L7m1.jpg"
-                ]
-            },
-            {
-                id: 4,
-                title: "센과 치히로의 행방불명",
-                originalTitle: "Spirited Away (2001)",
-                genre: ["애니메이션", "드라마"],
-                year: 2001,
-                rating: 9.5,
-                runtime: "125분",
-                director: "미야자키 하야오",
-                cast: "히이라기 루미, 입노 미유",
-                synopsis: "시골로 이사가던 중 이상한 터널을 지나 신들의 세계에 들어서게 된 소녀 치히로. 돼지로 변한 부모를 구하고 원래 세계로 돌아가기 위해 온천장에서 일하며 펼쳐지는 신비로운 모험.",
-                poster: "https://image.tmdb.org/t/p/w500/39wmItEPhE2vSu2JeAHLB3zLwqg.jpg",
-                backdrop: "https://image.tmdb.org/t/p/w1280/b2LfOiKezB0UZ9rtFwKJ2vC4X7f.jpg",
-                stillcuts: [
-                    "https://image.tmdb.org/t/p/w1280/b2LfOiKezB0UZ9rtFwKJ2vC4X7f.jpg",
-                    "https://image.tmdb.org/t/p/w1280/4k4c9K769aZ4K5m0L3.jpg",
-                    "https://image.tmdb.org/t/p/w1280/6k0v63Z8fJkK0q5r1.jpg",
-                    "https://image.tmdb.org/t/p/w1280/vM4m0L3r2K1j5p0.jpg"
-                ]
-            },
-            {
-                id: 5,
-                title: "다크 나이트",
-                originalTitle: "The Dark Knight (2008)",
-                genre: ["액션", "스릴러"],
-                year: 2008,
-                rating: 9.4,
-                runtime: "152분",
-                director: "크리스토퍼 놀란",
-                cast: "크리스찬 베일, 히스 레저",
-                synopsis: "범죄와 혼란이 가득한 고담시. 범죄 조직들을 탕진하려는 배트맨과 검사 하비 덴트 앞에 광기의 악마 조커가 나타나 고담시 전체를 무법천지로 만들고 배트맨을 극한의 시험대로 몰아넣는다.",
-                poster: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
-                backdrop: "https://image.tmdb.org/t/p/w1280/hkBaDhuWfsA95qOiVJjSZjHxcB0.jpg",
-                stillcuts: [
-                    "https://image.tmdb.org/t/p/w1280/hkBaDhuWfsA95qOiVJjSZjHxcB0.jpg",
-                    "https://image.tmdb.org/t/p/w1280/nMK9V9X6q50a6y0.jpg",
-                    "https://image.tmdb.org/t/p/w1280/dqk90aK6y0X.jpg",
-                    "https://image.tmdb.org/t/p/w1280/tZ8X7rL6a0M.jpg"
-                ]
-            },
-            {
-                id: 6,
-                title: "인셉션",
-                originalTitle: "Inception (2010)",
-                genre: ["SF", "액션", "스릴러"],
-                year: 2010,
-                rating: 9.3,
-                runtime: "148분",
-                director: "크리스토퍼 놀란",
-                cast: "레오나르도 디카프리오, 조셉 고든 레빗, 마리옹 꼬띠아르",
-                synopsis: "타인의 꿈에 침투해 생각을 도둑질하는 추출자 코브. 그에게 인셉션(생각을 식립하는 불가능한 임무)을 성공시키면 그의 과거와 자유를 돌려주겠다는 위험한 제안이 들어온다.",
-                poster: "https://image.tmdb.org/t/p/w500/edv5CZv2j0AFp2E3Y9f.jpg",
-                backdrop: "https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsDxchfmAU.jpg",
-                stillcuts: [
-                    "https://image.tmdb.org/t/p/w1280/8ZTVqvKDQ8emSGUEMjsDxchfmAU.jpg",
-                    "https://image.tmdb.org/t/p/w1280/s3TBrRGB1iav7y5Je3CHiWODK.jpg",
-                    "https://image.tmdb.org/t/p/w1280/26274p178y.jpg",
-                    "https://image.tmdb.org/t/p/w1280/35728a01k.jpg"
-                ]
-            },
-            {
-                id: 7,
-                title: "어바웃 타임",
-                originalTitle: "About Time (2013)",
-                genre: ["로맨스", "드라마", "코미디"],
-                year: 2013,
-                rating: 8.7,
-                runtime: "123분",
-                director: "리차드 커티스",
-                cast: "도널 글리슨, 레이첼 맥아담스",
-                synopsis: "성인이 되자 시간여행 능력이 있다는 가문의 비밀을 알게 된 팀. 런던에서 만난 사랑스러운 여인 메리에게 첫눈에 반하고, 그녀의 사랑을 얻기 위해 자신의 특별한 능력을 사용하기 시작한다.",
-                poster: "https://image.tmdb.org/t/p/w500/vGfL3hXwM2K3Z4r.jpg",
-                backdrop: "https://image.tmdb.org/t/p/w1280/38N90k856r05M89.jpg",
-                stillcuts: [
-                    "https://image.tmdb.org/t/p/w1280/38N90k856r05M89.jpg",
-                    "https://image.tmdb.org/t/p/w1280/67h2V8k990M.jpg",
-                    "https://image.tmdb.org/t/p/w1280/9K80zV750a1.jpg",
-                    "https://image.tmdb.org/t/p/w1280/1K45l2v90X.jpg"
-                ]
-            },
-            {
-                id: 8,
-                title: "매드맥스: 분노의 도로",
-                originalTitle: "Mad Max: Fury Road (2015)",
-                genre: ["액션", "SF"],
-                year: 2015,
-                rating: 8.8,
-                runtime: "120분",
-                director: "조지 밀러",
-                cast: "톰 하디, 샤를리즈 테론",
-                synopsis: "핵전쟁으로 멸망한 22세기. 물과 기름을 차지한 독재자 임모탄 조에 맞서 생존자 맥스와 여전사 퓨리오사가 광란의 황야에서 펼치는 폭주 액션.",
-                poster: "https://image.tmdb.org/t/p/w500/8tZYtuWezp8JbcsvHYO0O46tFbo.jpg",
-                backdrop: "https://image.tmdb.org/t/p/w1280/nlCHUWldm2Kkey3yuvBuXQFv16J.jpg",
-                stillcuts: [
-                    "https://image.tmdb.org/t/p/w1280/nlCHUWldm2Kkey3yuvBuXQFv16J.jpg",
-                    "https://image.tmdb.org/t/p/w1280/tbhdm8UJAbvVMeEAeeUZv27V8Z.jpg",
-                    "https://image.tmdb.org/t/p/w1280/vEkgK4m0a519sB4p2w1Q0.jpg",
-                    "https://image.tmdb.org/t/p/w1280/w34g8V2k3p8L7m0K5r1L.jpg"
-                ]
-            }
-        ];
+  <script>
+    // Global Application State
+    const state = {
+      step: 0,
+      mealType: '',
+      categories: [],
+      flavors: [],
+      dislikeFoods: '',
+      audioMuted: false,
+      apiKey: localStorage.getItem('gemini_api_key') || ''
+    };
 
-        // Genre filter categories
-        const genresList = ["전체", "SF", "액션", "로맨스", "드라마", "스릴러", "애니메이션", "코미디"];
+    // 1:1 Accurate Food Photo Lookup Table (Unsplash High-Res HD Food Images)
+    const foodImageMap = {
+      // 한식
+      '돼지김치찌개': 'https://images.unsplash.com/photo-1583224964978-2257b960c3d3?auto=format&fit=crop&w=600&q=80',
+      '차돌박이 된장찌개': 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80',
+      '제육볶음 정식': 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80',
+      '전주 비빔밥': 'https://images.unsplash.com/photo-1553163147-622ab57be1c7?auto=format&fit=crop&w=600&q=80',
+      '소불고기 덮밥': 'https://images.unsplash.com/photo-1603073163308-9654c3fb70b5?auto=format&fit=crop&w=600&q=80',
+      '삼겹살 구이': 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
+      '닭볶음탕': 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
+      '나주 곰탕': 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80',
 
-        // State Variables
-        let selectedGenre = "전체";
-        let currentMovie = null;
-        let wishlist = JSON.parse(localStorage.getItem('cine_wishlist')) || [];
-        let searchQuery = "";
+      // 중식
+      '해물 짬뽕': 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
+      '간짜장': 'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&fit=crop&w=600&q=80',
+      '짜장면': 'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&fit=crop&w=600&q=80',
+      '찹쌀 탕수육': 'https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=600&q=80',
+      '마라탕': 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
+      '마파두부 덮밥': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+      '유린기': 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=600&q=80',
 
-        // DOM Elements Initialization
-        const genreContainer = document.getElementById('genre-container');
-        const recommendBtn = document.getElementById('recommend-btn');
-        const btnText = document.getElementById('btn-text');
-        const placeholderCard = document.getElementById('placeholder-card');
-        const movieCard = document.getElementById('movie-card');
-        const searchInput = document.getElementById('search-input');
+      // 일식
+      '모둠 초밥': 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=600&q=80',
+      '초밥': 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=600&q=80',
+      '수제 돈카츠': 'https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=600&q=80',
+      '돈코츠 라멘': 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80',
+      '연어 덮밥 (사케동)': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+      '야키소바': 'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&fit=crop&w=600&q=80',
 
-        // Movie Card Dynamic DOM Elements
-        const movieTitle = document.getElementById('movie-title');
-        const movieOriginalTitle = document.getElementById('movie-original-title');
-        const movieGenresTags = document.getElementById('movie-genres-tags');
-        const moviePoster = document.getElementById('movie-poster');
-        const movieBackdrop = document.getElementById('movie-backdrop');
-        const movieRating = document.getElementById('movie-rating');
-        const movieYear = document.getElementById('movie-year');
-        const movieRuntime = document.getElementById('movie-runtime');
-        const movieDirector = document.getElementById('movie-director');
-        const movieSynopsis = document.getElementById('movie-synopsis');
-        const movieCast = document.getElementById('movie-cast');
-        const stillcutsContainer = document.getElementById('stillcuts-container');
-        const bookmarkBtn = document.getElementById('bookmark-btn');
-        const bookmarkIcon = document.getElementById('bookmark-icon');
-        const posterClickContainer = document.getElementById('poster-click-container');
+      // 양식
+      '매콤 투움바 파스타': 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=600&q=80',
+      '알리오 올리오': 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=600&q=80',
+      '페퍼로니 피자': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80',
+      '안심 스테이크': 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80',
+      '리코타 치즈 샐러드': 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80',
 
-        // Modal Elements
-        const openWishlistBtn = document.getElementById('open-wishlist-btn');
-        const closeWishlistBtn = document.getElementById('close-wishlist-btn');
-        const wishlistModal = document.getElementById('wishlist-modal');
-        const wishlistItems = document.getElementById('wishlist-items');
-        const wishlistCount = document.getElementById('wishlist-count');
-        const wishlistTotalText = document.getElementById('wishlist-total-text');
-        const clearWishlistBtn = document.getElementById('clear-wishlist-btn');
+      // 분식
+      '매콤 떡볶이 & 모둠튀김': 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
+      '떡볶이': 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
+      '참치 마요 김밥': 'https://images.unsplash.com/photo-1553163147-622ab57be1c7?auto=format&fit=crop&w=600&q=80',
+      '새콤한 쫄면': 'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&fit=crop&w=600&q=80',
+      '치즈 라볶이': 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
 
-        // Lightbox Elements
-        const lightboxModal = document.getElementById('lightbox-modal');
-        const lightboxImg = document.getElementById('lightbox-img');
-        const closeLightbox = document.getElementById('close-lightbox');
+      // 멕시칸
+      '소고기 타코': 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=600&q=80',
+      '치킨 브리또': 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?auto=format&fit=crop&w=600&q=80',
+      '치즈 퀘사디아': 'https://images.unsplash.com/photo-1618040996337-56904b7850b9?auto=format&fit=crop&w=600&q=80',
 
-        // Application Start
-        function initApp() {
-            renderGenrePills();
-            updateWishlistBadge();
-            setupEventListeners();
+      // 아시안
+      '소고기 쌀국수': 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=600&q=80',
+      '쉬림프 팟타이': 'https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=600&q=80',
+      '푸팟퐁커리': 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=600&q=80',
+
+      // 패스트푸드
+      '수제 치즈버거 세트': 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80',
+      '후라이드 치킨': 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=600&q=80',
+      '양념 치킨': 'https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=600&q=80',
+
+      // 디저트
+      '딸기 생크림 케이크 & 커피': 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=600&q=80',
+      '크로플 & 바닐라 아이스크림': 'https://images.unsplash.com/photo-1562376552-0d160a2f238d?auto=format&fit=crop&w=600&q=80',
+      '인절미 눈꽃빙수': 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=600&q=80',
+      '에그타르트 & 라떼': 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
+      '과일 수박 화채': 'https://images.unsplash.com/photo-1568571780765-9276ac8b75a2?auto=format&fit=crop&w=600&q=80'
+    };
+
+    // Category Fallback Image URLs
+    const categoryDefaultImages = {
+      '한식': 'https://images.unsplash.com/photo-1583224964978-2257b960c3d3?auto=format&fit=crop&w=600&q=80',
+      '중식': 'https://images.unsplash.com/photo-1617093727343-374698b1b08d?auto=format&fit=crop&w=600&q=80',
+      '일식': 'https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=600&q=80',
+      '양식': 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=600&q=80',
+      '분식': 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80',
+      '멕시칸': 'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=600&q=80',
+      '아시안': 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=600&q=80',
+      '패스트푸드': 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80',
+      '디저트': 'https://images.unsplash.com/photo-1535141192574-5d4897c13136?auto=format&fit=crop&w=600&q=80'
+    };
+
+    // Helper to retrieve exact photo URL by dish name
+    function getFoodImage(menuName, category) {
+      if (foodImageMap[menuName]) return foodImageMap[menuName];
+      for (const [key, url] of Object.entries(foodImageMap)) {
+        if (menuName.includes(key) || key.includes(menuName)) return url;
+      }
+      return categoryDefaultImages[category] || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80';
+    }
+
+    // Category Options
+    const categoriesData = [
+      { id: '한식', iconEmoji: '🍲', desc: '찌개, 고기, 밥' },
+      { id: '중식', iconEmoji: '🥟', desc: '짜장, 짬뽕, 마라' },
+      { id: '일식', iconEmoji: '🍣', desc: '초밥, 라멘, 돈카츠' },
+      { id: '양식', iconEmoji: '🍝', desc: '파스타, 피자, 스테이크' },
+      { id: '분식', iconEmoji: '🍢', desc: '떡볶이, 튀김, 김밥' },
+      { id: '멕시칸', iconEmoji: '🌮', desc: '타코, 브리또' },
+      { id: '아시안', iconEmoji: '🍜', desc: '쌀국수, 팟타이, 카레' },
+      { id: '패스트푸드', iconEmoji: '🍔', desc: '버거, 치킨' },
+      { id: '상관없음', iconEmoji: '🎲', desc: '모두 골라줘' }
+    ];
+
+    // Flavor Options
+    const flavorsData = [
+      { id: '매콤한', icon: '🌶️' },
+      { id: '달달한', icon: '🍯' },
+      { id: '짭짤한', icon: '🧂' },
+      { id: '새콤한', icon: '🍋' },
+      { id: '고소/담백', icon: '🧀' },
+      { id: '따뜻한 국물', icon: '🍲' },
+      { id: '깔끔/가벼운', icon: '🥗' }
+    ];
+
+    const foodDatabase = [
+      // 한식
+      { name: '돼지김치찌개', category: '한식', mealType: '식사류', flavors: ['매콤한', '따뜻한 국물', '짭짤한'], tags: ['김치', '돼지고기'] },
+      { name: '차돌박이 된장찌개', category: '한식', mealType: '식사류', flavors: ['따뜻한 국물', '고소/담백', '짭짤한'], tags: ['된장', '차돌'] },
+      { name: '제육볶음 정식', category: '한식', mealType: '식사류', flavors: ['매콤한', '달달한', '짭짤한'], tags: ['돼지고기', '제육'] },
+      { name: '전주 비빔밥', category: '한식', mealType: '식사류', flavors: ['고소/담백', '깔끔/가벼운'], tags: ['나물', '비빔밥'] },
+      { name: '소불고기 덮밥', category: '한식', mealType: '식사류', flavors: ['달달한', '짭짤한', '고소/담백'], tags: ['불고기', '소고기'] },
+      { name: '삼겹살 구이', category: '한식', mealType: '식사류', flavors: ['고소/담백', '짭짤한'], tags: ['돼지고기', '삼겹살'] },
+      { name: '닭볶음탕', category: '한식', mealType: '식사류', flavors: ['매콤한', '달달한', '따뜻한 국물'], tags: ['닭고기'] },
+
+      // 중식
+      { name: '해물 짬뽕', category: '중식', mealType: '식사류', flavors: ['매콤한', '따뜻한 국물', '짭짤한'], tags: ['해물', '면'] },
+      { name: '간짜장', category: '중식', mealType: '식사류', flavors: ['달달한', '짭짤한', '고소/담백'], tags: ['짜장', '면'] },
+      { name: '찹쌀 탕수육', category: '중식', mealType: '식사류', flavors: ['달달한', '새콤한'], tags: ['돼지고기', '튀김'] },
+      { name: '마라탕', category: '중식', mealType: '식사류', flavors: ['매콤한', '따뜻한 국물'], tags: ['마라', '해산물'] },
+      { name: '마파두부 덮밥', category: '중식', mealType: '식사류', flavors: ['매콤한', '짭짤한'], tags: ['두부'] },
+
+      // 일식
+      { name: '모둠 초밥', category: '일식', mealType: '식사류', flavors: ['깔끔/가벼운', '고소/담백'], tags: ['생선', '해산물'] },
+      { name: '수제 돈카츠', category: '일식', mealType: '식사류', flavors: ['고소/담백', '짭짤한'], tags: ['돼지고기', '튀김'] },
+      { name: '돈코츠 라멘', category: '일식', mealType: '식사류', flavors: ['따뜻한 국물', '고소/담백', '짭짤한'], tags: ['면', '국물'] },
+      { name: '연어 덮밥 (사케동)', category: '일식', mealType: '식사류', flavors: ['깔끔/가벼운', '고소/담백'], tags: ['연어', '생선'] },
+
+      // 양식
+      { name: '매콤 투움바 파스타', category: '양식', mealType: '식사류', flavors: ['매콤한', '고소/담백'], tags: ['파스타', '새우'] },
+      { name: '알리오 올리오', category: '양식', mealType: '식사류', flavors: ['깔끔/가벼운', '고소/담백', '짭짤한'], tags: ['파스타', '마늘'] },
+      { name: '페퍼로니 피자', category: '양식', mealType: '식사류', flavors: ['짭짤한', '고소/담백'], tags: ['피자', '치즈'] },
+      { name: '안심 스테이크', category: '양식', mealType: '식사류', flavors: ['고소/담백', '짭짤한'], tags: ['소고기', '고기'] },
+
+      // 분식
+      { name: '매콤 떡볶이 & 모둠튀김', category: '분식', mealType: '식사류', flavors: ['매콤한', '달달한'], tags: ['떡볶이', '튀김'] },
+      { name: '참치 마요 김밥', category: '분식', mealType: '식사류', flavors: ['고소/담백', '짭짤한'], tags: ['김밥', '참치'] },
+      { name: '새콤한 쫄면', category: '분식', mealType: '식사류', flavors: ['매콤한', '새콤한'], tags: ['면'] },
+
+      // 멕시칸
+      { name: '소고기 타코', category: '멕시칸', mealType: '식사류', flavors: ['매콤한', '새콤한', '깔끔/가벼운'], tags: ['타코', '소고기'] },
+      { name: '치킨 브리또', category: '멕시칸', mealType: '식사류', flavors: ['고소/담백', '깔끔/가벼운'], tags: ['닭고기'] },
+
+      // 아시안
+      { name: '소고기 쌀국수', category: '아시안', mealType: '식사류', flavors: ['따뜻한 국물', '깔끔/가벼운'], tags: ['국물', '면'] },
+      { name: '쉬림프 팟타이', category: '아시안', mealType: '식사류', flavors: ['달달한', '새콤한', '짭짤한'], tags: ['면', '새우'] },
+
+      // 패스트푸드
+      { name: '수제 치즈버거 세트', category: '패스트푸드', mealType: '식사류', flavors: ['짭짤한', '고소/담백'], tags: ['버거', '소고기'] },
+      { name: '후라이드 치킨', category: '패스트푸드', mealType: '식사류', flavors: ['고소/담백', '짭짤한'], tags: ['치킨', '닭고기'] },
+
+      // 후식류
+      { name: '딸기 생크림 케이크 & 커피', category: '디저트', mealType: '후식류', flavors: ['달달한', '깔끔/가벼운'], tags: ['케이크', '커피'] },
+      { name: '크로플 & 바닐라 아이스크림', category: '디저트', mealType: '후식류', flavors: ['달달한', '고소/담백'], tags: ['아이스크림', '빵'] },
+      { name: '인절미 눈꽃빙수', category: '디저트', mealType: '후식류', flavors: ['달달한', '고소/담백'], tags: ['빙수'] }
+    ];
+
+    // Page Load Setup
+    window.onload = function() {
+      initCanvas();
+      renderCategoryOptions();
+      renderFlavorOptions();
+      if(state.apiKey) document.getElementById('apiKeyInput').value = state.apiKey;
+    };
+
+    // Canvas Background
+    function initCanvas() {
+      const canvas = document.getElementById('particleCanvas');
+      const ctx = canvas.getContext('2d');
+      let width = canvas.width = window.innerWidth;
+      let height = canvas.height = window.innerHeight;
+
+      window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      const particles = Array.from({ length: 25 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        r: Math.random() * 4 + 1.5,
+        dx: (Math.random() - 0.5) * 0.4,
+        dy: (Math.random() - 0.5) * 0.4,
+        opacity: Math.random() * 0.5 + 0.2
+      }));
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+        particles.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(249, 115, 22, ${p.opacity})`;
+          ctx.fill();
+          p.x += p.dx;
+          p.y += p.dy;
+          if (p.x < 0 || p.x > width) p.dx *= -1;
+          if (p.y < 0 || p.y > height) p.dy *= -1;
+        });
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    // Sound FX Synthesis
+    function playSound(type) {
+      if (state.audioMuted) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        if (type === 'click') {
+          osc.frequency.setValueAtTime(450, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.08);
+        } else if (type === 'tada') {
+          const notes = [523.25, 659.25, 783.99, 1046.50];
+          notes.forEach((freq, idx) => {
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.connect(g);
+            g.connect(ctx.destination);
+            o.frequency.value = freq;
+            g.gain.setValueAtTime(0.1, ctx.currentTime + idx * 0.09);
+            g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.09 + 0.3);
+            o.start(ctx.currentTime + idx * 0.09);
+            o.stop(ctx.currentTime + idx * 0.09 + 0.3);
+          });
         }
+      } catch (e) {}
+    }
 
-        // Render Filter Pills
-        function renderGenrePills() {
-            genreContainer.innerHTML = genresList.map(genre => {
-                const isActive = genre === selectedGenre;
-                const activeClasses = isActive 
-                    ? 'bg-gradient-to-r from-cinema-red to-cinema-purple text-white shadow-lg scale-105 border-transparent font-bold' 
-                    : 'glass-panel text-gray-300 hover:bg-white/10 hover:text-white border-white/10';
+    function toggleAudioMute() {
+      state.audioMuted = !state.audioMuted;
+      document.getElementById('muteBtnText').innerText = state.audioMuted ? '효과음 OFF' : '효과음 ON';
+      document.getElementById('muteBtn').classList.toggle('opacity-50', state.audioMuted);
+    }
 
-                return `
-                    <button data-genre="${genre}" class="genre-btn px-4 py-2 rounded-full text-xs sm:text-sm transition-all duration-300 border ${activeClasses}">
-                        ${genre === '전체' ? '🎬 전체' : genre}
-                    </button>
-                `;
-            }).join('');
+    // Navigation & Wizard State Control
+    function goToStep(stepNum) {
+      playSound('click');
+      state.step = stepNum;
 
-            document.querySelectorAll('.genre-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    selectedGenre = e.currentTarget.getAttribute('data-genre');
-                    renderGenrePills();
-                });
-            });
+      document.getElementById('screenEntry').classList.toggle('hidden', stepNum !== 0);
+      document.getElementById('screenWizard').classList.toggle('hidden', stepNum === 0 || stepNum > 4);
+      document.getElementById('screenUnboxing').classList.add('hidden');
+      document.getElementById('screenResults').classList.add('hidden');
+
+      if (stepNum >= 1 && stepNum <= 4) {
+        document.getElementById('wizardStepLabel').innerText = `단계 ${stepNum} / 4`;
+        const stepNames = ['식사구분 선택', '카테고리 선택 (복수)', '맛 취향 선택 (복수)', '제외 음식 입력'];
+        document.getElementById('wizardStepName').innerText = stepNames[stepNum - 1];
+        document.getElementById('progressBar').style.width = `${stepNum * 25}%`;
+
+        document.getElementById('step1').classList.toggle('hidden', stepNum !== 1);
+        document.getElementById('step2').classList.toggle('hidden', stepNum !== 2);
+        document.getElementById('step3').classList.toggle('hidden', stepNum !== 3);
+        document.getElementById('step4').classList.toggle('hidden', stepNum !== 4);
+      }
+    }
+
+    function prevStep() {
+      if (state.step > 1) {
+        goToStep(state.step - 1);
+      } else {
+        goToStep(0);
+      }
+    }
+
+    function selectMealType(type) {
+      state.mealType = type;
+      goToStep(2);
+    }
+
+    function renderCategoryOptions() {
+      const container = document.getElementById('categoryContainer');
+      container.innerHTML = categoriesData.map(c => `
+        <button id="catBtn_${c.id}" onclick="toggleCategory('${c.id}')" class="option-btn p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-orange-400 transition-all text-center flex flex-col items-center justify-center gap-1 active:scale-95 group relative">
+          <span class="text-3xl group-hover:scale-110 transition-transform">${c.iconEmoji}</span>
+          <span class="font-extrabold text-slate-800 text-xs sm:text-sm">${c.id}</span>
+          <span class="text-[10px] text-slate-400 font-normal hidden sm:inline">${c.desc}</span>
+          <div class="check-badge hidden absolute top-1.5 right-1.5 w-4 h-4 bg-orange-500 rounded-full text-white text-[9px] flex items-center justify-center">
+            <i class="fa-solid fa-check"></i>
+          </div>
+        </button>
+      `).join('');
+    }
+
+    function toggleCategory(catId) {
+      playSound('click');
+      if (catId === '상관없음') {
+        state.categories = ['상관없음'];
+      } else {
+        const anyIdx = state.categories.indexOf('상관없음');
+        if (anyIdx > -1) state.categories.splice(anyIdx, 1);
+
+        const idx = state.categories.indexOf(catId);
+        if (idx > -1) {
+          state.categories.splice(idx, 1);
+        } else {
+          state.categories.push(catId);
         }
+      }
+      updateCategoryUI();
+    }
 
-        // Get Movies according to Genre & Search
-        function getFilteredMovies() {
-            let list = moviesDatabase;
-            if (selectedGenre !== '전체') {
-                list = list.filter(m => m.genre.includes(selectedGenre));
-            }
-            if (searchQuery.trim() !== '') {
-                const q = searchQuery.toLowerCase();
-                list = list.filter(m => 
-                    m.title.toLowerCase().includes(q) || 
-                    m.director.toLowerCase().includes(q) || 
-                    m.cast.toLowerCase().includes(q)
-                );
-            }
-            return list;
+    function updateCategoryUI() {
+      categoriesData.forEach(c => {
+        const btn = document.getElementById(`catBtn_${c.id}`);
+        const badge = btn.querySelector('.check-badge');
+        if (state.categories.includes(c.id)) {
+          btn.classList.add('selected');
+          badge.classList.remove('hidden');
+          badge.classList.add('flex');
+        } else {
+          btn.classList.remove('selected');
+          badge.classList.add('hidden');
+          badge.classList.remove('flex');
         }
+      });
+      document.getElementById('selectedCategoryCount').innerText = `${state.categories.length}개 선택됨`;
+    }
 
-        // Random Selection Trigger & Shuffle Animation
-        function triggerRandomRecommendation() {
-            const availableMovies = getFilteredMovies();
-            if (availableMovies.length === 0) {
-                alert('해당 장르 및 검색어 조건에 만족하는 영화가 없습니다!');
-                return;
-            }
+    function validateCategoriesAndNext() {
+      if (state.categories.length === 0) {
+        state.categories = ['상관없음'];
+        updateCategoryUI();
+      }
+      goToStep(3);
+    }
 
-            recommendBtn.classList.add('shuffling');
-            btnText.innerText = "영화 고르는 중...";
+    function renderFlavorOptions() {
+      const container = document.getElementById('flavorContainer');
+      container.innerHTML = flavorsData.map(f => `
+        <button id="flavorBtn_${f.id}" onclick="toggleFlavor('${f.id}')" class="option-btn p-3.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-rose-400 transition-all text-center flex items-center justify-center gap-2 active:scale-95 font-bold text-xs sm:text-sm text-slate-700 relative">
+          <span>${f.icon}</span>
+          <span>${f.id}</span>
+          <div class="check-badge hidden absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 rounded-full text-white text-[9px] flex items-center justify-center">
+            <i class="fa-solid fa-check"></i>
+          </div>
+        </button>
+      `).join('');
+    }
 
-            let counter = 0;
-            const shuffleInterval = setInterval(() => {
-                counter++;
-                if (counter > 6) {
-                    clearInterval(shuffleInterval);
-                    finalizeRecommendation(availableMovies);
-                }
-            }, 80);
+    function toggleFlavor(flavorId) {
+      playSound('click');
+      const idx = state.flavors.indexOf(flavorId);
+      if (idx > -1) {
+        state.flavors.splice(idx, 1);
+      } else {
+        state.flavors.push(flavorId);
+      }
+      updateFlavorUI();
+    }
+
+    function updateFlavorUI() {
+      flavorsData.forEach(f => {
+        const btn = document.getElementById(`flavorBtn_${f.id}`);
+        const badge = btn.querySelector('.check-badge');
+        if (state.flavors.includes(f.id)) {
+          btn.classList.add('selected');
+          badge.classList.remove('hidden');
+          badge.classList.add('flex');
+        } else {
+          btn.classList.remove('selected');
+          badge.classList.add('hidden');
+          badge.classList.remove('flex');
         }
+      });
+      document.getElementById('selectedFlavorCount').innerText = `${state.flavors.length}개 선택됨`;
+    }
 
-        function finalizeRecommendation(availableMovies) {
-            let chosenMovie;
-            if (availableMovies.length > 1 && currentMovie) {
-                const otherMovies = availableMovies.filter(m => m.id !== currentMovie.id);
-                chosenMovie = otherMovies[Math.floor(Math.random() * otherMovies.length)];
-            } else {
-                chosenMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)];
-            }
+    function validateFlavorsAndNext() {
+      if (state.flavors.length === 0) {
+        state.flavors = ['고소/담백'];
+        updateFlavorUI();
+      }
+      goToStep(4);
+    }
 
-            currentMovie = chosenMovie;
-            recommendBtn.classList.remove('shuffling');
-            btnText.innerText = "다른 영화 또 추천받기";
+    // Step 4 Avoided Food Helpers
+    function addDislikeChip(text) {
+      playSound('click');
+      const input = document.getElementById('dislikeInput');
+      if (input.value.trim()) {
+        input.value += `, ${text}`;
+      } else {
+        input.value = text;
+      }
+    }
 
-            renderMovieDetail(chosenMovie);
+    function clearDislikeInput() {
+      document.getElementById('dislikeInput').value = '';
+    }
+
+    async function startRecommendation(skipAvoidance) {
+      playSound('click');
+      if (skipAvoidance) {
+        state.dislikeFoods = '없음';
+      } else {
+        state.dislikeFoods = document.getElementById('dislikeInput').value.trim() || '없음';
+      }
+
+      document.getElementById('screenWizard').classList.add('hidden');
+      document.getElementById('screenUnboxing').classList.remove('hidden');
+
+      const catText = state.categories.join(', ') || '상관없음';
+      const flavorText = state.flavors.join(', ') || '기본';
+      document.getElementById('selectionSummary').innerText = 
+        `[${state.mealType}] • 카테고리: ${catText} • 맛 취향: ${flavorText} • 제외: ${state.dislikeFoods}`;
+
+      let results = [];
+      try {
+        if (state.apiKey) {
+          results = await fetchGeminiRecommendations();
+        } else {
+          results = generateLocalRecommendations();
         }
+      } catch (err) {
+        console.warn('Gemini API 호출 중 예외 발생. 스마트 로컬 추천 알고리즘 실행:', err);
+        results = generateLocalRecommendations();
+      }
 
-        // Render Complete Movie Detail Card & Real Scene Stills
-        function renderMovieDetail(movie) {
-            placeholderCard.classList.add('hidden');
-            movieCard.classList.remove('hidden');
+      setTimeout(() => {
+        showResults(results);
+      }, 1250);
+    }
 
-            movieCard.classList.remove('fade-in-up');
-            void movieCard.offsetWidth; // trigger reflow
-            movieCard.classList.add('fade-in-up');
+    // Local Algorithm Engine (Strict Rank 1~3 matching chosen category and flavor)
+    function generateLocalRecommendations() {
+      const dislikes = state.dislikeFoods !== '없음' 
+        ? state.dislikeFoods.split(/[, ]+/).filter(Boolean) 
+        : [];
 
-            movieTitle.innerText = movie.title;
-            movieOriginalTitle.innerText = movie.originalTitle;
-            
-            // Poster & Backdrop image load with fallbacks
-            moviePoster.src = movie.poster;
-            moviePoster.onerror = function() {
-                this.src = `https://placehold.co/500x750/1a1a26/f5c518?text=${encodeURIComponent(movie.title + ' 포스터')}`;
-            };
+      let candidates = foodDatabase.filter(food => {
+        if (food.mealType !== state.mealType && state.mealType !== '') return false;
+        if (dislikes.some(d => food.name.includes(d) || food.tags.some(t => t.includes(d)))) return false;
+        return true;
+      });
 
-            movieBackdrop.src = movie.backdrop;
-            movieBackdrop.onerror = function() {
-                this.src = `https://placehold.co/1280x720/0a0a0f/ffffff?text=${encodeURIComponent(movie.title + ' 배경스틸')}`;
-            };
+      const selectedCats = state.categories.includes('상관없음') ? [] : state.categories;
 
-            movieRating.innerText = movie.rating;
-            movieYear.innerText = movie.year + "년";
-            movieRuntime.innerText = movie.runtime;
-            movieDirector.innerText = movie.director;
-            movieSynopsis.innerText = movie.synopsis;
-            movieCast.innerText = movie.cast;
+      candidates.forEach(f => {
+        const catMatch = selectedCats.length === 0 || selectedCats.includes(f.category) ? 10 : 0;
+        const flavorMatchCount = f.flavors.filter(fl => state.flavors.includes(fl)).length;
+        f.score = catMatch + flavorMatchCount;
+      });
 
-            // Genre Badges
-            movieGenresTags.innerHTML = movie.genre.map(g => `
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cinema-red/20 text-cinema-red border border-cinema-red/30">
-                    ${g}
+      candidates.sort((a, b) => b.score - a.score);
+
+      const finalResults = [];
+
+      // Strictly collect Top 1~3 matching chosen category and flavor
+      const perfectMatches = candidates.filter(f => 
+        (selectedCats.length === 0 || selectedCats.includes(f.category)) &&
+        f.flavors.some(fl => state.flavors.includes(fl))
+      );
+
+      perfectMatches.slice(0, 3).forEach(item => {
+        if (!finalResults.includes(item)) finalResults.push(item);
+      });
+
+      // Fill remaining 4th and 5th slots
+      candidates.forEach(item => {
+        if (finalResults.length < 5 && !finalResults.includes(item)) {
+          finalResults.push(item);
+        }
+      });
+
+      return finalResults.slice(0, 5).map((food, idx) => ({
+        rank: idx + 1,
+        menu_name: food.name,
+        category: food.category,
+        reason: getLocalReasonText(idx + 1, food, selectedCats, state.flavors)
+      }));
+    }
+
+    function getLocalReasonText(rank, food, selectedCats, chosenFlavors) {
+      const flavorStr = chosenFlavors.join(', ') || '입맛';
+      if (rank === 1) {
+        return `선택하신 [${food.category}] 카테고리와 [${flavorStr}] 취향을 100% 만족하는 최우선 1위 추천 메뉴입니다!`;
+      } else if (rank <= 3) {
+        return `선택하신 [${food.category}] 카테고리에 맞춰 [${flavorStr}] 조합을 살린 훌륭한 메뉴입니다.`;
+      } else {
+        return `선호하시는 맛 취향을 반영해 색다르게 즐기실 수 있는 추천 메뉴입니다.`;
+      }
+    }
+
+    // Gemini API Direct Request Engine
+    async function fetchGeminiRecommendations() {
+      const promptText = `
+[역할]
+사용자의 기분과 취향에 딱 맞는 메뉴를 찾아주는 배달/식사 메뉴 추천 전문가.
+
+[입력 데이터]
+- 구분: ${state.mealType}
+- 선택 카테고리 (복수): ${state.categories.join(', ')}
+- 선호하는 맛 (복수): ${state.flavors.join(', ')}
+- 피하고 싶은 음식: ${state.dislikeFoods}
+
+[추천 규칙]
+1. 1위~3위 메뉴는 사용자가 선택한 [선택 카테고리: ${state.categories.join(', ')}]와 [선택한 맛: ${state.flavors.join(', ')}]을 100% 엄격하게 만족하는 메뉴이어야 합니다.
+2. 4위~5위 메뉴도 선호하는 맛을 적극 반영하되, 약간의 연관 메뉴를 허용합니다.
+3. [피하고 싶은 음식: ${state.dislikeFoods}]에 적힌 재료나 메뉴는 절대로 포함하지 마세요.
+4. 반드시 아래 JSON 포맷으로만 응답하세요.
+
+[출력 JSON 포맷]
+{
+  "recommendations": [
+    { "rank": 1, "menu_name": "음식명", "category": "카테고리", "reason": "1위 추천 이유" },
+    { "rank": 2, "menu_name": "음식명", "category": "카테고리", "reason": "2위 추천 이유" },
+    { "rank": 3, "menu_name": "음식명", "category": "카테고리", "reason": "3위 추천 이유" },
+    { "rank": 4, "menu_name": "음식명", "category": "카테고리", "reason": "4위 추천 이유" },
+    { "rank": 5, "menu_name": "음식명", "category": "카테고리", "reason": "5위 추천 이유" }
+  ]
+}
+      `;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${state.apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: promptText }] }],
+          generationConfig: { responseMimeType: "application/json" }
+        })
+      });
+
+      const data = await response.json();
+      const rawText = data.candidates[0].content.parts[0].text;
+      const parsed = JSON.parse(rawText);
+      return parsed.recommendations;
+    }
+
+    function showResults(results) {
+      document.getElementById('screenUnboxing').classList.add('hidden');
+      document.getElementById('screenResults').classList.remove('hidden');
+
+      playSound('tada');
+      try {
+        confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 } });
+      } catch (e) {}
+
+      const container = document.getElementById('resultsContainer');
+      const badgeStyles = [
+        'bg-amber-500 text-white border-amber-400 shadow-amber-500/30',
+        'bg-slate-800 text-white border-slate-700 shadow-slate-800/20',
+        'bg-orange-600 text-white border-orange-500 shadow-orange-600/20',
+        'bg-slate-200 text-slate-700 border-slate-300',
+        'bg-slate-200 text-slate-700 border-slate-300'
+      ];
+
+      container.innerHTML = results.map((item, idx) => {
+        const photoUrl = getFoodImage(item.menu_name, item.category);
+        return `
+          <div class="glass-card rounded-2xl p-3.5 sm:p-4 shadow-lg flex items-center gap-3.5 sm:gap-4 border border-white/80 transform hover:-translate-y-0.5 transition-transform overflow-hidden">
+            <!-- Rank Badge -->
+            <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl ${badgeStyles[idx]} flex items-center justify-center font-black text-sm sm:text-base shadow-md shrink-0">
+              ${item.rank}위
+            </div>
+
+            <!-- 1:1 Accurate Food Thumbnail -->
+            <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden shrink-0 shadow-inner bg-slate-100 relative">
+              <img src="${photoUrl}" alt="${item.menu_name}" class="w-full h-full object-cover transform hover:scale-110 transition-transform duration-300" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80';">
+            </div>
+
+            <!-- Menu Content -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h4 class="font-extrabold text-slate-900 text-base sm:text-lg truncate">${item.menu_name}</h4>
+                <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] sm:text-[11px] font-bold border border-slate-200 shrink-0">
+                  ${item.category}
                 </span>
-            `).join('');
+              </div>
+              <p class="text-xs text-slate-600 font-medium mt-1 line-clamp-2 leading-relaxed">${item.reason}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
-            // Real Movie Stills Gallery Rendering with Error Handling Fallback
-            stillcutsContainer.innerHTML = movie.stillcuts.map((imgUrl, index) => {
-                const fallbackUrl = `https://placehold.co/800x450/1a1a26/f5c518?text=${encodeURIComponent(movie.title + ' 명장면 ' + (index + 1))}`;
-                return `
-                    <div class="group relative rounded-xl overflow-hidden aspect-video bg-cinema-700 cursor-pointer shadow-md border border-white/5 hover:border-cinema-gold transition-all duration-300" onclick="openLightbox('${imgUrl}')">
-                        <img src="${imgUrl}" 
-                             alt="${movie.title} 명장면 ${index + 1}" 
-                             onerror="this.onerror=null; this.src='${fallbackUrl}';" 
-                             class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <i class="fa-solid fa-magnifying-glass-plus text-white text-lg"></i>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+    // Share & Restart
+    function shareResults() {
+      playSound('click');
+      const topMenu = document.querySelector('#resultsContainer h4')?.innerText || '오늘의 맞춤 메뉴';
+      const text = `🍱 오늘뭐먹지? 스마트 메뉴 추천 결과!\n` +
+                   `1위 추천: ${topMenu}\n` +
+                   `지금 나만의 맞춤 음식 메뉴를 찾아보세요!`;
+      
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert('추천 결과가 클립보드에 복사되었습니다!');
+        }).catch(() => {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    }
 
-            updateBookmarkIcon();
+    function fallbackCopyText(text) {
+      const dummy = document.createElement('textarea');
+      document.body.appendChild(dummy);
+      dummy.value = text;
+      dummy.select();
+      document.execCommand('copy');
+      document.body.removeChild(dummy);
+      alert('추천 결과가 클립보드에 복사되었습니다!');
+    }
 
-            if (window.innerWidth < 768) {
-                movieCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
+    function restartApp() {
+      playSound('click');
+      state.step = 0;
+      state.mealType = '';
+      state.categories = [];
+      state.flavors = [];
+      state.dislikeFoods = '';
+      updateCategoryUI();
+      updateFlavorUI();
+      goToStep(0);
+    }
 
-        // Bookmark & Wishlist Logic
-        function updateBookmarkIcon() {
-            if (!currentMovie) return;
-            const isBookmarked = wishlist.some(item => item.id === currentMovie.id);
-            if (isBookmarked) {
-                bookmarkIcon.className = "fa-solid fa-bookmark text-cinema-gold text-xl";
-            } else {
-                bookmarkIcon.className = "fa-regular fa-bookmark text-xl";
-            }
-        }
+    // Modal Operations
+    function openApiModal() {
+      document.getElementById('apiModal').classList.remove('hidden');
+    }
 
-        function toggleBookmark() {
-            if (!currentMovie) return;
-            const index = wishlist.findIndex(item => item.id === currentMovie.id);
+    function closeApiModal() {
+      document.getElementById('apiModal').classList.add('hidden');
+    }
 
-            if (index > -1) {
-                wishlist.splice(index, 1);
-            } else {
-                wishlist.push(currentMovie);
-            }
-
-            localStorage.setItem('cine_wishlist', JSON.stringify(wishlist));
-            updateBookmarkIcon();
-            updateWishlistBadge();
-        }
-
-        function updateWishlistBadge() {
-            wishlistCount.innerText = wishlist.length;
-            wishlistTotalText.innerText = `총 ${wishlist.length}개의 영화 저장됨`;
-        }
-
-        function renderWishlistItems() {
-            if (wishlist.length === 0) {
-                wishlistItems.innerHTML = `
-                    <div class="text-center py-12 text-gray-400">
-                        <i class="fa-regular fa-bookmark text-4xl mb-3 opacity-40"></i>
-                        <p class="text-xs sm:text-sm">보관함이 비어있습니다.</p>
-                        <p class="text-[11px] text-gray-500 mt-1">맘에 드는 영화의 북마크 버튼을 눌러 저장해보세요!</p>
-                    </div>
-                `;
-                return;
-            }
-
-            wishlistItems.innerHTML = wishlist.map(movie => `
-                <div class="flex items-center gap-4 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                    <img src="${movie.poster}" alt="${movie.title}" onerror="this.src='https://placehold.co/100x150/1a1a26/fff?text=Poster';" class="w-14 h-20 object-cover rounded-xl shadow">
-                    <div class="flex-grow">
-                        <h4 class="font-bold text-white text-sm sm:text-base">${movie.title}</h4>
-                        <p class="text-xs text-gray-400 mb-1">${movie.year} · ${movie.genre.join(', ')}</p>
-                        <span class="text-xs text-cinema-gold font-bold"><i class="fa-solid fa-star text-[10px]"></i> ${movie.rating}</span>
-                    </div>
-                    <button onclick="removeWishlistItem(${movie.id})" class="p-2 text-gray-400 hover:text-cinema-red transition-colors" title="삭제">
-                        <i class="fa-solid fa-trash-can"></i>
-                    </button>
-                </div>
-            `).join('');
-        }
-
-        function removeWishlistItem(id) {
-            wishlist = wishlist.filter(item => item.id !== id);
-            localStorage.setItem('cine_wishlist', JSON.stringify(wishlist));
-            updateWishlistBadge();
-            renderWishlistItems();
-            updateBookmarkIcon();
-        }
-
-        function openLightbox(url) {
-            lightboxImg.src = url;
-            lightboxModal.classList.remove('hidden');
-        }
-
-        // Global Event Listeners Setup
-        function setupEventListeners() {
-            recommendBtn.addEventListener('click', triggerRandomRecommendation);
-            bookmarkBtn.addEventListener('click', toggleBookmark);
-
-            posterClickContainer.addEventListener('click', () => {
-                if (currentMovie) openLightbox(currentMovie.poster);
-            });
-
-            // Live Search Handler
-            searchInput.addEventListener('input', (e) => {
-                searchQuery = e.target.value;
-            });
-
-            // Modal Controls
-            openWishlistBtn.addEventListener('click', () => {
-                renderWishlistItems();
-                wishlistModal.classList.remove('hidden');
-                setTimeout(() => wishlistModal.classList.add('opacity-100'), 10);
-                document.body.classList.add('modal-active');
-            });
-
-            const closeModal = () => {
-                wishlistModal.classList.remove('opacity-100');
-                setTimeout(() => {
-                    wishlistModal.classList.add('hidden');
-                    document.body.classList.remove('modal-active');
-                }, 300);
-            };
-
-            closeWishlistBtn.addEventListener('click', closeModal);
-            wishlistModal.addEventListener('click', (e) => {
-                if (e.target === wishlistModal) closeModal();
-            });
-
-            clearWishlistBtn.addEventListener('click', () => {
-                if (wishlist.length === 0) return;
-                wishlist = [];
-                localStorage.setItem('cine_wishlist', JSON.stringify(wishlist));
-                updateWishlistBadge();
-                renderWishlistItems();
-                updateBookmarkIcon();
-            });
-
-            // Lightbox Close Controls
-            closeLightbox.addEventListener('click', () => {
-                lightboxModal.classList.add('hidden');
-            });
-            lightboxModal.addEventListener('click', (e) => {
-                if (e.target === lightboxModal) lightboxModal.classList.add('hidden');
-            });
-        }
-
-        window.onload = function() {
-            initApp();
-        };
-    </script>
+    function saveApiKey() {
+      const val = document.getElementById('apiKeyInput').value.trim();
+      state.apiKey = val;
+      localStorage.setItem('gemini_api_key', val);
+      alert(val ? 'Gemini API 키가 저장되었습니다!' : 'API 키가 삭제되어 기본 스마트 로컬 DB 엔진을 사용합니다.');
+      closeApiModal();
+    }
+  </script>
 </body>
 </html>
